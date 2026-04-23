@@ -93,10 +93,11 @@ useEffect(() => {
     })
     .then(res => res.json())
     .then(data => {
-      if (data.access_token) {
-        setToken(data.access_token);
-        sessionStorage.setItem("sp_token", data.access_token);
-      }
+     if (data.access_token) {
+  setToken(data.access_token);
+  sessionStorage.setItem("sp_token", data.access_token);
+  window.history.replaceState(null, "", window.location.pathname);
+}
     });
   }
 
