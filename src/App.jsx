@@ -77,49 +77,27 @@ function useSpotify(clientId) {
  const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
 useEffect(() => {
-  const code = new URLSearchParams(window.location.search).get("code");
+  const hash = window.location.hash;
 
-  if (code) {
-    fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: clientId,
-        grant_type: "authorization_code",
-        code: code,
-        redirect_uri: REDIRECT,
-        code_verifier: sessionStorage.getItem("verifier")
-      })
-    })
-    .then(res => res.json())
-    .then(data => {
-     if (data.access_token) {
-  setToken(data.access_token);
-  sessionStorage.setItem("sp_token", data.access_token);
-  window.history.replaceState(null, "", window.location.pathname);
-}
-    });
+  if (hash.includes("access_token")) {
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const token = params.get("access_token");
+
+    if (token) {
+      setToken(token);
+      sessionStorage.setItem("sp_token", token);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }
 
   const saved = sessionStorage.getItem("sp_token");
   if (saved) setToken(saved);
 }, []);
 
-const login = async () => {
+const login = () => {
   if (!clientId) return;
 
-  const verifier = Math.random().toString(36).repeat(4);
-  sessionStorage.setItem("verifier", verifier);
-
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge_method=S256&code_challenge=${challenge}&scope=user-read-private`;
+  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private`;
 
   window.location.href = url;
 };
@@ -347,7 +325,7 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist 
 
       {slot.id!=="rs" && (
         <div style={{marginBottom:12}}>
-          <AlbumSearch searchFn={null} onSelect={a=>updateSlot("album",a)}/>
+          <AlbumSearch searchFn={sp.searchAlbums} onSelect={a=>updateSlot("album",a)}/>
           {slot.album && (
             <div style={{marginTop:8,padding:8,background:"#1a1a2e",borderRadius:8,display:"flex",gap:10}}>
               <AlbumArt src={slot.album.image} size={40}/>
