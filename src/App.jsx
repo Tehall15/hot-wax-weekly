@@ -77,8 +77,32 @@ function useSpotify(clientId) {
  const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
 useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
+  const code = new URLSearchParams(window.location.search).get("code");
+
+  if (code) {
+    fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: REDIRECT,
+        code_verifier: "simple123"
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.access_token) {
+        setToken(data.access_token);
+        sessionStorage.setItem("sp_token", data.access_token);
+      }
+    });
+  }
+
+  const saved = sessionStorage.getItem("sp_token");
+  if (saved) setToken(saved);
+}, []);
 
   if (code) {
     setToken(code);
@@ -90,10 +114,15 @@ useEffect(() => {
   if (saved) setToken(saved);
 }, []);
 
-  const login = () => {
-    if (!clientId) return;
-    const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private&show_dialog=true`;
-    window.location.href = url;
+const login = () => {
+  if (!clientId) return;
+
+  const verifier = "simple123"; // just a fixed string (fine for now)
+  sessionStorage.setItem("verifier", verifier);
+
+  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge=${verifier}&code_challenge_method=plain&scope=user-read-private&show_dialog=true`;
+
+  window.location.href = url;
   };
 
   const api = async (path) => {
