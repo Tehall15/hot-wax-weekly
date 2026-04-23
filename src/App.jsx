@@ -91,14 +91,18 @@ useEffect(() => {
         code_verifier: "simple123"
       })
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.access_token) {
-        setToken(data.access_token);
-        sessionStorage.setItem("sp_token", data.access_token);
-      }
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.access_token) {
+          setToken(data.access_token);
+          sessionStorage.setItem("sp_token", data.access_token);
+        }
+      });
   }
+
+  const saved = sessionStorage.getItem("sp_token");
+  if (saved) setToken(saved);
+}, []);
 
   const saved = sessionStorage.getItem("sp_token");
   if (saved) setToken(saved);
