@@ -74,7 +74,7 @@ const getWeekKey = () => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.
 
 function useSpotify(clientId) {
   const [token, setToken] = useState(null);
-  const REDIRECT = typeof window !== "undefined" ? window.location.href.split("?")[0].split("#")[0] : "";
+ const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
   useEffect(() => {
     const hash = window.location.hash;
