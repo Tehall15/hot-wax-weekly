@@ -88,7 +88,7 @@ useEffect(() => {
         grant_type: "authorization_code",
         code: code,
         redirect_uri: REDIRECT,
-        code_verifier: "simple123"
+        code_verifier: sessionStorage.getItem("verifier")
       })
     })
     .then(res => res.json())
@@ -104,16 +104,24 @@ useEffect(() => {
   if (saved) setToken(saved);
 }, []);
 
-const login = () => {
+const login = async () => {
   if (!clientId) return;
 
-  const verifier = "simple123"; // just a fixed string (fine for now)
+  const verifier = Math.random().toString(36).repeat(4);
   sessionStorage.setItem("verifier", verifier);
 
-  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge=${verifier}&code_challenge_method=plain&scope=user-read-private&show_dialog=true`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge_method=S256&code_challenge=${challenge}&scope=user-read-private`;
 
   window.location.href = url;
-  };
+};
 
   const api = async (path) => {
     if (!token) return null;
