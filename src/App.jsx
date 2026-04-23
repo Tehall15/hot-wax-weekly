@@ -89,7 +89,7 @@ function useSpotify(clientId) {
 
   const login = () => {
     if (!clientId) return;
-    const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private&show_dialog=true`;
+    const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private&show_dialog=true`;
     window.location.href = url;
   };
 
