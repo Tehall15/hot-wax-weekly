@@ -76,20 +76,23 @@ function useSpotify(clientId) {
   const [token, setToken] = useState(null);
  const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.replace("#","?").slice(1));
-      const t = params.get("access_token");
-      if (t) { setToken(t); sessionStorage.setItem("sp_token",t); window.history.replaceState(null,"",window.location.pathname); }
-    }
-    const saved = sessionStorage.getItem("sp_token");
-    if (saved) setToken(saved);
-  }, []);
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+
+  if (code) {
+    setToken(code);
+    sessionStorage.setItem("sp_token", code);
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
+  const saved = sessionStorage.getItem("sp_token");
+  if (saved) setToken(saved);
+}, []);
 
   const login = () => {
     if (!clientId) return;
-    const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private&show_dialog=true`;
+    const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private&show_dialog=true`;
     window.location.href = url;
   };
 
