@@ -325,7 +325,7 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist 
 
       {slot.id!=="rs" && (
         <div style={{marginBottom:12}}>
-          <AlbumSearch searchFn={sp.searchAlbums} onSelect={a=>updateSlot("album",a)}/>
+         <AlbumSearch searchFn={null} onSelect={a=>updateSlot("album",a)}/>
           {slot.album && (
             <div style={{marginTop:8,padding:8,background:"#1a1a2e",borderRadius:8,display:"flex",gap:10}}>
               <AlbumArt src={slot.album.image} size={40}/>
