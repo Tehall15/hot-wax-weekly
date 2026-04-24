@@ -605,7 +605,11 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
       reviewedAt:new Date().toISOString(),
       rs500Rank:s.type==="rs500"?(s.album.rs500Rank||RS500.find(r=>r.album===s.album.album)?.rank||null):null,
     }));
-    const updated = [...reviews,...entries];
+const filtered = reviews.filter(
+  r => !(r.weekKey === weekKey && entries.some(e => e.type === r.type))
+);
+
+const updated = [...filtered, ...entries];
     setReviews(updated);
     await persist(updated);
     setTab("history");
