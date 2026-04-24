@@ -72,41 +72,103 @@ const NOW_YEAR = new Date().getFullYear();
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const getWeekKey = () => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()+1); return d.toISOString().split("T")[0]; };
 
+// PKCE helper functions
+function generateRandomString(length) {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return values.reduce((acc, x) => acc + possible[x % possible.length], "");
+}
+
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return window.crypto.subtle.digest('SHA-256', data);
+}
+
+function base64encode(input) {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
 function useSpotify(clientId) {
   const [token, setToken] = useState(null);
- const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
+  const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
-useEffect(() => {
-  const hash = window.location.hash;
-
-  if (hash.includes("access_token")) {
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const token = params.get("access_token");
-
-    if (token) {
-      setToken(token);
-      sessionStorage.setItem("sp_token", token);
-      window.history.replaceState(null, "", window.location.pathname);
+  useEffect(() => {
+    // Check for code in URL (PKCE callback)
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    
+    if (code) {
+      const codeVerifier = localStorage.getItem('code_verifier');
+      if (codeVerifier) {
+        exchangeCodeForToken(code, codeVerifier, clientId);
+      }
     }
-  }
 
-  const saved = sessionStorage.getItem("sp_token");
-  if (saved) setToken(saved);
-}, []);
+    // Check for existing token
+    const saved = sessionStorage.getItem("sp_token");
+    if (saved) setToken(saved);
+  }, [clientId]);
 
-const login = () => {
-  if (!clientId) return;
+  const exchangeCodeForToken = async (code, codeVerifier, clientId) => {
+    const payload = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT,
+        code_verifier: codeVerifier,
+      }),
+    };
 
-  const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=user-read-private`;
+    try {
+      const response = await fetch('https://accounts.spotify.com/api/token', payload);
+      const data = await response.json();
+      
+      if (data.access_token) {
+        setToken(data.access_token);
+        sessionStorage.setItem("sp_token", data.access_token);
+        localStorage.removeItem('code_verifier');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch (error) {
+      console.error('Token exchange failed:', error);
+    }
+  };
 
-  window.location.href = url;
-};
+  const login = async () => {
+    if (!clientId) return;
+
+    const codeVerifier = generateRandomString(64);
+    const hashed = await sha256(codeVerifier);
+    const codeChallenge = base64encode(hashed);
+
+    localStorage.setItem('code_verifier', codeVerifier);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      redirect_uri: REDIRECT,
+      scope: 'user-read-private',
+      code_challenge_method: 'S256',
+      code_challenge: codeChallenge,
+    });
+
+    window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  };
 
   const api = async (path) => {
     if (!token) return null;
     try {
       const r = await fetch(`https://api.spotify.com/v1/${path}`, { headers:{ Authorization:`Bearer ${token}` }});
-      if (r.status === 401) { setToken(null); return null; }
+      if (r.status === 401) { setToken(null); sessionStorage.removeItem("sp_token"); return null; }
       return await r.json();
     } catch { return null; }
   };
@@ -116,7 +178,9 @@ const login = () => {
     const data = await api(`search?q=${encodeURIComponent(q)}&type=album&limit=8`);
     if (!data?.albums?.items) return [];
     return data.albums.items.map(a => ({
-      spotifyId: a.id, artist: a.artists[0]?.name || "", album: a.name,
+      spotifyId: a.id, 
+      artist: a.artists[0]?.name || "", 
+      album: a.name,
       year: parseInt(a.release_date?.split("-")[0]) || 0,
       image: a.images?.[1]?.url || a.images?.[0]?.url || null,
     }));
@@ -133,7 +197,9 @@ const login = () => {
     const data = await api("browse/new-releases?limit=20&country=GB");
     if (!data?.albums?.items) return [];
     return data.albums.items.map(a => ({
-      spotifyId: a.id, artist: a.artists[0]?.name || "", album: a.name,
+      spotifyId: a.id, 
+      artist: a.artists[0]?.name || "", 
+      album: a.name,
       year: parseInt(a.release_date?.split("-")[0]) || 0,
       image: a.images?.[1]?.url || a.images?.[0]?.url || null,
     }));
@@ -293,7 +359,7 @@ function AlbumSearch({ onSelect, searchFn }) {
   );
 }
 
-function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist }) {
+function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist, searchFn }) {
   const [tracks, setTracks] = useState([]);
 
   useEffect(()=>{
@@ -325,7 +391,7 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist 
 
       {slot.id!=="rs" && (
         <div style={{marginBottom:12}}>
-         <AlbumSearch searchFn={null} onSelect={a=>updateSlot("album",a)}/>
+          <AlbumSearch searchFn={searchFn} onSelect={a=>updateSlot("album",a)}/>
           {slot.album && (
             <div style={{marginTop:8,padding:8,background:"#1a1a2e",borderRadius:8,display:"flex",gap:10}}>
               <AlbumArt src={slot.album.image} size={40}/>
@@ -567,6 +633,7 @@ export default function App() {
             updateSlot={(f,v)=>updateSlot("c1",f,v)} 
             rollRS={null}
             getTracklist={sp.getTracklist}
+            searchFn={sp.token?sp.searchAlbums:null}
           />
           <SlotCard 
             slot={slots[1]} 
@@ -576,6 +643,7 @@ export default function App() {
             updateSlot={(f,v)=>updateSlot("c2",f,v)} 
             rollRS={null}
             getTracklist={sp.getTracklist}
+            searchFn={sp.token?sp.searchAlbums:null}
           />
           <SlotCard 
             slot={slots[2]} 
@@ -585,6 +653,7 @@ export default function App() {
             updateSlot={(f,v)=>updateSlot("rs",f,v)} 
             rollRS={rollRS}
             getTracklist={sp.getTracklist}
+            searchFn={sp.token?sp.searchAlbums:null}
           />
 
           {completed>0 && (
