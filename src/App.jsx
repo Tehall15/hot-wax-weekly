@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  "https://lxjojudkuxkuczeafyjm.supabase.co",
+  "sb_publishable_HhE8gSTXSMtQkVYl0k0G4A_hZhU8OiD"
+);
 
 const RS500 = [
   { rank:1,artist:"The Beatles",album:"Sgt. Pepper's Lonely Hearts Club Band",year:1967 },
@@ -451,29 +457,45 @@ export default function App() {
 
   const sp = useSpotify(clientId);
 
-  useEffect(()=>{
-    (async()=>{
-      try {
-        const r = await window.storage.get("hotwax-v1");
-        if (r) {
-          const d=JSON.parse(r.value);
-          setReviews(d.reviews||[]);
-          setListenLater(d.listenLater||[]);
-          setTop4All(d.top4All||[null,null,null,null]);
-          setTop4Year(d.top4Year||[null,null,null,null]);
-          setClientId(d.clientId||"");
-          setClientInput(d.clientId||"");
-        }
-      } catch {}
-      setLoaded(true);
-    })();
-  },[]);
+useEffect(()=>{
+  (async()=>{
+    const { data } = await supabase
+      .from('app_data')
+      .select('*')
+      .eq('id', 'main')
+      .single();
 
-  const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid=clientId) => {
-    setSaving(true);
-    try { await window.storage.set("hotwax-v1", JSON.stringify({reviews:r,listenLater:ll,top4All:t4a,top4Year:t4y,clientId:cid})); } catch {}
-    setSaving(false);
+    if (data?.data) {
+      const d = data.data;
+      setReviews(d.reviews || []);
+      setListenLater(d.listenLater || []);
+      setTop4All(d.top4All || [null,null,null,null]);
+      setTop4Year(d.top4Year || [null,null,null,null]);
+      setClientId(d.clientId || "");
+      setClientInput(d.clientId || "");
+    }
+
+    setLoaded(true);
+  })();
+}, []);
+
+const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid=clientId) => {
+  setSaving(true);
+
+  const payload = {
+    reviews: r,
+    listenLater: ll,
+    top4All: t4a,
+    top4Year: t4y,
+    clientId: cid
   };
+
+  await supabase
+    .from('app_data')
+    .upsert({ id: "main", data: payload });
+
+  setSaving(false);
+};
 
   const saveClient = async () => {
     setClientId(clientInput);
