@@ -381,25 +381,26 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist,
         <Pill color={color+"22"}>{badge}</Pill>
       </div>
 
-      {slot.id==="rs" && !slot.album && (
+{slot.id==="rs" && !slot.album && (
   <>
     <Btn onClick={rollRS} variant="ghost" style={{width:"100%",marginBottom:8}}>
       🎲 Random Classic
     </Btn>
 
-    <AlbumSearch searchFn={null} onSelect={a=>updateSlot("album",a)} />
+    <AlbumSearch searchFn={searchFn} onSelect={a=>updateSlot("album",a)} />
   </>
 )}
-      {slot.id==="rs" && slot.album && (
-        <div style={{marginBottom:12,display:"flex",gap:10}}>
-          <AlbumArt src={slot.album.image} size={44}/>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:700}}>{slot.album.album}</div>
-            <div style={{color:"#888",fontSize:12}}>{slot.album.artist}</div>
-          </div>
-          <Btn onClick={rollRS} variant="ghost" style={{padding:"5px 10px",fontSize:11}}>🎲</Btn>
-        </div>
-      )}
+
+{slot.id==="rs" && slot.album && (
+  <div style={{marginBottom:12,display:"flex",gap:10}}>
+    <AlbumArt src={slot.album.image} size={44}/>
+    <div style={{flex:1}}>
+      <div style={{fontWeight:700}}>{slot.album.album}</div>
+      <div style={{color:"#888",fontSize:12}}>{slot.album.artist}</div>
+    </div>
+    <Btn onClick={rollRS} variant="ghost" style={{padding:"5px 10px",fontSize:11}}>🎲</Btn>
+  </div>
+)}
 
       {slot.id!=="rs" && (
         <div style={{marginBottom:12}}>
