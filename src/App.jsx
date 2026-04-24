@@ -498,12 +498,57 @@ useEffect(() => {
     return;
   }
 
-  const contemporaries = existing.filter(r => r.type === "contemporary");
+const contemporaries = existing.filter(r => r.type === "contemporary");
+const rs = existing.find(r => r.type === "rs500");
 
 setSlots([
-  contemporaries[0] || EMPTY()[0],
-  contemporaries[1] || EMPTY()[1],
-  existing.find(r => r.type === "rs500") || EMPTY()[2],
+  contemporaries[0]
+    ? {
+        ...EMPTY()[0],
+        album: {
+          artist: contemporaries[0].artist,
+          album: contemporaries[0].album,
+          year: contemporaries[0].year,
+          image: contemporaries[0].image,
+          spotifyId: contemporaries[0].spotifyId,
+        },
+        rating: contemporaries[0].rating,
+        topTracks: contemporaries[0].topTracks,
+        notes: contemporaries[0].notes,
+      }
+    : EMPTY()[0],
+
+  contemporaries[1]
+    ? {
+        ...EMPTY()[1],
+        album: {
+          artist: contemporaries[1].artist,
+          album: contemporaries[1].album,
+          year: contemporaries[1].year,
+          image: contemporaries[1].image,
+          spotifyId: contemporaries[1].spotifyId,
+        },
+        rating: contemporaries[1].rating,
+        topTracks: contemporaries[1].topTracks,
+        notes: contemporaries[1].notes,
+      }
+    : EMPTY()[1],
+
+  rs
+    ? {
+        ...EMPTY()[2],
+        album: {
+          artist: rs.artist,
+          album: rs.album,
+          year: rs.year,
+          image: rs.image,
+          spotifyId: rs.spotifyId,
+        },
+        rating: rs.rating,
+        topTracks: rs.topTracks,
+        notes: rs.notes,
+      }
+    : EMPTY()[2],
 ]);
 }, [reviews, loaded]);
 
@@ -730,7 +775,9 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
                       <button onClick={()=>del(r.id)} style={{background:"none",border:"none",color:"#444",cursor:"pointer"}}>×</button>
                     </div>
                   </div>
-                  <div style={{color:"#777",fontSize:12,marginTop:2}}>{r.artist}</div>
+                  <div style={{color:"#777",fontSize:12,marginTop:2}}>
+  {r.artist} · Week of {new Date(r.weekKey).toLocaleDateString("en-GB", { day:"numeric", month:"short" })}
+</div>
                   <div style={{display:"flex",gap:5,marginTop:6,flexWrap:"wrap"}}>
                     <Pill>{r.year}</Pill>
                     {r.rs500Rank&&<Pill color="#2a2000">RS500 #{r.rs500Rank}</Pill>}
