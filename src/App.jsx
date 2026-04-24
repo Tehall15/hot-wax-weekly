@@ -447,8 +447,17 @@ export default function App() {
   const [top4Year, setTop4Year] = useState([null,null,null,null]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [slots, setSlots] = useState(EMPTY());
-  const [weekKey] = useState(getWeekKey());
+const [slots, setSlots] = useState(() => {
+  const existing = reviews.filter(r => r.weekKey === getWeekKey());
+
+  if (existing.length === 0) return EMPTY();
+
+  return [
+    existing.filter(r => r.type === "contemporary")[0] || EMPTY()[0],
+    existing.filter(r => r.type === "contemporary")[1] || EMPTY()[1],
+    existing.find(r => r.type === "rs500") || EMPTY()[2],
+  ];
+});  const [weekKey] = useState(getWeekKey());
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const [clientId, setClientId] = useState("");
   const [clientInput, setClientInput] = useState("");
@@ -478,6 +487,25 @@ useEffect(()=>{
     setLoaded(true);
   })();
 }, []);
+
+useEffect(() => {
+  if (!loaded) return;
+
+  const existing = reviews.filter(r => r.weekKey === getWeekKey());
+
+  if (existing.length === 0) {
+    setSlots(EMPTY());
+    return;
+  }
+
+  const contemporaries = existing.filter(r => r.type === "contemporary");
+
+setSlots([
+  contemporaries[0] || EMPTY()[0],
+  contemporaries[1] || EMPTY()[1],
+  existing.find(r => r.type === "rs500") || EMPTY()[2],
+]);
+}, [reviews, loaded]);
 
 const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid=clientId) => {
   setSaving(true);
@@ -528,7 +556,6 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
     const updated = [...reviews,...entries];
     setReviews(updated);
     await persist(updated);
-    setSlots(EMPTY());
     setTab("history");
   };
 
