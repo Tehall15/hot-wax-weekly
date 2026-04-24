@@ -382,8 +382,14 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist,
       </div>
 
       {slot.id==="rs" && !slot.album && (
-        <Btn onClick={rollRS} variant="ghost" style={{width:"100%",marginBottom:12}}>🎲 Roll RS500</Btn>
-      )}
+  <>
+    <Btn onClick={rollRS} variant="ghost" style={{width:"100%",marginBottom:8}}>
+      🎲 Random Classic
+    </Btn>
+
+    <AlbumSearch searchFn={null} onSelect={a=>updateSlot("album",a)} />
+  </>
+)}
       {slot.id==="rs" && slot.album && (
         <div style={{marginBottom:12,display:"flex",gap:10}}>
           <AlbumArt src={slot.album.image} size={44}/>
@@ -391,7 +397,7 @@ function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist,
             <div style={{fontWeight:700}}>{slot.album.album}</div>
             <div style={{color:"#888",fontSize:12}}>{slot.album.artist}</div>
           </div>
-          <Btn onClick={rollRS} variant="ghost" style={{padding:"5px 10px",fontSize:11}}>↺</Btn>
+          <Btn onClick={rollRS} variant="ghost" style={{padding:"5px 10px",fontSize:11}}>🎲</Btn>
         </div>
       )}
 
@@ -741,8 +747,8 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
           />
           <SlotCard 
             slot={slots[2]} 
-            label="RS500 Pick" 
-            badge="Classic" 
+            label="Classic Pick"
+badge="Classic" 
             color="#F4C542" 
             updateSlot={(f,v)=>updateSlot("rs",f,v)} 
             rollRS={rollRS}
