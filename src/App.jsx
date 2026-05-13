@@ -471,6 +471,9 @@ const [slots, setSlots] = useState(() => {
   const [showSetup, setShowSetup] = useState(false);
   const [editTop4, setEditTop4] = useState(null);
 
+const [user, setUser] = useState(null);
+const [authLoading, setAuthLoading] = useState(true);
+
   const sp = useSpotify(clientId);
 
 useEffect(()=>{
