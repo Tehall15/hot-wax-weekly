@@ -503,6 +503,7 @@ const [slots, setSlots] = useState(() => {
     existing.filter(r => r.type === "contemporary")[1] || EMPTY()[1],
     existing.find(r => r.type === "rs500") || EMPTY()[2],
   ];
+});
 
 const [weekKey, setWeekKey] = useState(getWeekKey());
 
