@@ -544,6 +544,17 @@ const resetWeek = () => {
   const [editTop4, setEditTop4] = useState(null);
 
 const [user, setUser] = useState(null);
+const [profile, setProfile] = useState(null);
+
+const loadProfile = async (userId) => {
+  const { data } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .single();
+
+  setProfile(data || null);
+};
 const [authLoading, setAuthLoading] = useState(true);
 
   const sp = useSpotify(clientId);
@@ -638,14 +649,33 @@ setSlots([
 }, [reviews, loaded]);
 
 useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    setUser(data.session?.user || null);
+  supabase.auth.getSession().then(async ({ data }) => {
+    const currentUser = data.session?.user || null;
+
+    setUser(currentUser);
+
+    if (currentUser) {
+      await loadProfile(currentUser.id);
+    } else {
+      setProfile(null);
+    }
+
     setAuthLoading(false);
   });
 
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user || null);
-  });
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+      const currentUser = session?.user || null;
+
+      setUser(currentUser);
+
+      if (currentUser) {
+        await loadProfile(currentUser.id);
+      } else {
+        setProfile(null);
+      }
+    }
+  );
 
   return () => listener.subscription.unsubscribe();
 }, []);
@@ -774,7 +804,16 @@ if (!user) {
     <div style={S.app}>
       <div style={{paddingTop:28,textAlign:"center"}}>
         <h1 style={{fontSize:26,fontWeight:700,margin:0}}>🔥 Hot Wax Weekly</h1>
-        <p style={{color:"#444",fontSize:12,marginTop:4,fontStyle:"italic"}}>your album journal</p>
+        <p style={{
+  color:"#444",
+  fontSize:12,
+  marginTop:4,
+  fontStyle:"italic"
+}}>
+  {profile?.display_name
+    ? `${profile.display_name}'s album journal`
+    : "your album journal"}
+</p>
         <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:8}}>
          {sp.token
   ? <span style={{fontSize:11,color:"#1DB954"}}>● Spotify connected</span>
@@ -1074,24 +1113,33 @@ const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
 const [showVerifyMessage, setShowVerifyMessage] = useState(false);
 
-  const handleAuth = async () => {
-    setLoading(true);
+ const handleAuth = async () => {
+  setLoading(true);
 
-if (isLogin) {
-  await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-} else {
-  const { error } = await supabase.auth.signUp({
-    email,
-    password
-  });
+  if (isLogin) {
+    await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+  } else {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password
+    });
 
-  if (!error) {
-    setShowVerifyMessage(true);
+    if (!error && data.user) {
+      await supabase
+        .from("profiles")
+        .insert([
+          {
+            id: data.user.id,
+            display_name: displayName
+          }
+        ]);
+
+      setShowVerifyMessage(true);
+    }
   }
-}
 
 setLoading(false);
   };
