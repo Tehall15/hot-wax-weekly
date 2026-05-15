@@ -203,8 +203,17 @@ function useSpotify(clientId) {
   const api = async (path) => {
     if (!token) return null;
     try {
-      const r = await fetch(`https://api.spotify.com/v1/${path}`, { headers:{ Authorization:`Bearer ${token}` }});
-      if (r.status === 401) { setToken(null); sessionStorage.removeItem("sp_token"); return null; }
+      const r = await fetch(`https://api.spotify.com/v1/${path}`, {
+  headers:{ Authorization:`Bearer ${token}` }
+});
+
+console.log("Spotify status", r.status);
+
+if (r.status === 401) {
+  setToken(null);
+  sessionStorage.removeItem("sp_token");
+  return null;
+}
       return await r.json();
     } catch { return null; }
   };
