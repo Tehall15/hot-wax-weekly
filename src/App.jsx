@@ -559,7 +559,7 @@ const loadProfile = async (userId) => {
 
   setProfile(data || null);
 };
-const [authLoading, setAuthLoading] = useState(false);
+const [authLoading, setAuthLoading] = useState(true);
 
   const sp = useSpotify(clientId);
 
@@ -661,16 +661,7 @@ useEffect(() => {
 
       setUser(currentUser);
 
-      if (currentUser) {
-        try {
-          await loadProfile(currentUser.id);
-        } catch (err) {
-          console.error(err);
-          setProfile(null);
-        }
-      } else {
-        setProfile(null);
-      }
+     setProfile(null);
     } catch (err) {
       console.error(err);
     } finally {
