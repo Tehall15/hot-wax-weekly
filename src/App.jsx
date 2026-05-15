@@ -791,12 +791,6 @@ const updated = [...filtered, ...entries];
   const completed = slots.filter(s=>s.album&&s.rating>0).length;
   const years = [...new Set(reviews.map(r=>new Date(r.reviewedAt).getFullYear()))].sort((a,b)=>b-a);
 
-  if (!loaded) return (
-    <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
-      Data Loading…
-    </div>
-  );
-
 if (!user) {
   return <AuthScreen />;
 }
