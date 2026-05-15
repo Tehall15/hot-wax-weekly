@@ -559,7 +559,7 @@ const loadProfile = async (userId) => {
 
   setProfile(data || null);
 };
-const [authLoading, setAuthLoading] = useState(true);
+const [authLoading, setAuthLoading] = useState(false);
 
   const sp = useSpotify(clientId);
 
