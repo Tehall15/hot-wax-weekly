@@ -649,19 +649,32 @@ setSlots([
 }, [reviews, loaded]);
 
 useEffect(() => {
-  supabase.auth.getSession().then(async ({ data }) => {
-    const currentUser = data.session?.user || null;
+  const initAuth = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
 
-    setUser(currentUser);
+      const currentUser = data.session?.user || null;
 
-    if (currentUser) {
-      await loadProfile(currentUser.id);
-    } else {
-      setProfile(null);
+      setUser(currentUser);
+
+      if (currentUser) {
+        try {
+          await loadProfile(currentUser.id);
+        } catch (err) {
+          console.error(err);
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAuthLoading(false);
     }
+  };
 
-    setAuthLoading(false);
-  });
+  initAuth();
 
   const { data: listener } = supabase.auth.onAuthStateChange(
     async (_event, session) => {
@@ -670,7 +683,12 @@ useEffect(() => {
       setUser(currentUser);
 
       if (currentUser) {
-        await loadProfile(currentUser.id);
+        try {
+          await loadProfile(currentUser.id);
+        } catch (err) {
+          console.error(err);
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
