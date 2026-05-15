@@ -167,7 +167,6 @@ function useSpotify(clientId) {
 
   localStorage.removeItem('code_verifier');
   window.history.replaceState({}, document.title, window.location.pathname);
-window.location.reload();
 
   const {
     data: { user }
@@ -570,7 +569,6 @@ const [authLoading, setAuthLoading] = useState(false);
 
 useEffect(()=>{
   if (!user) {
-  setLoaded(true);
   return;
 }
 
