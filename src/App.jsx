@@ -562,6 +562,19 @@ setSlots([
 ]);
 }, [reviews, loaded]);
 
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setUser(data.session?.user || null);
+    setAuthLoading(false);
+  });
+
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user || null);
+  });
+
+  return () => listener.subscription.unsubscribe();
+}, []);
+
 const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid=clientId) => {
   setSaving(true);
 
