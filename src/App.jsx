@@ -121,19 +121,18 @@ function useSpotify(clientId) {
 
       if (!user) return;
 
-      const { data, error } = await supabase
-  .from('app_data')
-  .select('spotify_token')
-  .eq('id', user.id)
-  .maybeSingle();
+      try {
+  const { data } = await supabase
+    .from('app_data')
+    .select('spotify_token')
+    .eq('id', user.id)
+    .maybeSingle();
 
-if (error) {
-  console.error(error);
-  return;
-}
-
-if (data?.spotify_token) {
-  setToken(data.spotify_token);
+  if (data?.spotify_token) {
+    setToken(data.spotify_token);
+  }
+} catch (err) {
+  console.error("Spotify token load failed", err);
 }
     };
 
