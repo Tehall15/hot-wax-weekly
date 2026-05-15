@@ -503,7 +503,20 @@ const [slots, setSlots] = useState(() => {
     existing.filter(r => r.type === "contemporary")[1] || EMPTY()[1],
     existing.find(r => r.type === "rs500") || EMPTY()[2],
   ];
-});  const [weekKey] = useState(getWeekKey());
+});  const [weekKey, setWeekKey] = useState(getWeekKey());
+
+const [weekKey, setWeekKey] = useState(getWeekKey());
+
+const shiftWeek = (days) => {
+  const d = new Date(weekKey);
+  d.setDate(d.getDate() + days);
+  setWeekKey(d.toISOString().split("T")[0]);
+};
+
+const resetWeek = () => {
+  setWeekKey(getWeekKey());
+};
+
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const [editTop4, setEditTop4] = useState(null);
@@ -762,9 +775,47 @@ if (!user) {
         <div>
           <div style={{...S.card,background:"#0e0e20",display:"flex",justifyContent:"space-between"}}>
             <div>
-              <div style={{fontSize:12,color:"#555"}}>Week of</div>
-              <div style={{fontSize:15,fontWeight:700}}>{new Date(weekKey).toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</div>
-            </div>
+  <div style={{fontSize:12,color:"#555"}}>Week of</div>
+
+  <div style={{fontSize:15,fontWeight:700}}>
+    {new Date(weekKey).toLocaleDateString("en-GB",{
+      day:"numeric",
+      month:"long"
+    })}
+  </div>
+
+  <div style={{display:"flex",gap:6,marginTop:8}}>
+    <button
+      onClick={()=>shiftWeek(-7)}
+      style={{
+        background:"#1a1a2e",
+        border:"1px solid #2a2a4e",
+        color:"#888",
+        borderRadius:6,
+        padding:"4px 8px",
+        cursor:"pointer",
+        fontSize:11
+      }}
+    >
+      ← Previous
+    </button>
+
+    <button
+      onClick={resetWeek}
+      style={{
+        background:"#1a1a2e",
+        border:"1px solid #2a2a4e",
+        color:"#888",
+        borderRadius:6,
+        padding:"4px 8px",
+        cursor:"pointer",
+        fontSize:11
+      }}
+    >
+      Current
+    </button>
+  </div>
+</div>
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:26,fontWeight:700,color:"#F4C542"}}>{completed}/3</div>
               <div style={{fontSize:11,color:"#555"}}>ready</div>
