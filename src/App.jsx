@@ -504,8 +504,6 @@ const [slots, setSlots] = useState(() => {
     existing.find(r => r.type === "rs500") || EMPTY()[2],
   ];
 
-});  
-
 const [weekKey, setWeekKey] = useState(getWeekKey());
 
 const shiftWeek = (days) => {
