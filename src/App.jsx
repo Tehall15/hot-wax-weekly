@@ -114,10 +114,26 @@ function useSpotify(clientId) {
       }
     }
 
-    // Check for existing token
-    const saved = sessionStorage.getItem("sp_token");
-    if (saved) setToken(saved);
-  }, [clientId]);
+    const loadSpotifyToken = async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('app_data')
+        .select('spotify_token')
+        .eq('id', user.id)
+        .single();
+
+      if (data?.spotify_token) {
+        setToken(data.spotify_token);
+      }
+    };
+
+    loadSpotifyToken();
+}, [clientId]);
 
   const exchangeCodeForToken = async (code, codeVerifier, clientId) => {
     const payload = {
@@ -138,12 +154,26 @@ function useSpotify(clientId) {
       const response = await fetch('https://accounts.spotify.com/api/token', payload);
       const data = await response.json();
       
-      if (data.access_token) {
-        setToken(data.access_token);
-        sessionStorage.setItem("sp_token", data.access_token);
-        localStorage.removeItem('code_verifier');
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+     if (data.access_token) {
+  setToken(data.access_token);
+
+  localStorage.removeItem('code_verifier');
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    await supabase
+      .from('app_data')
+      .update({
+        spotify_token: data.access_token,
+        spotify_connected: true
+      })
+      .eq('id', user.id);
+  }
+}
     } catch (error) {
       console.error('Token exchange failed:', error);
     }
