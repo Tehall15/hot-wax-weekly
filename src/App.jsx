@@ -173,27 +173,6 @@ function useSpotify(clientId) {
       window.location.pathname
     );
 
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      supabase
-        .from('app_data')
-        .upsert({
-          id: user.id,
-          spotify_token: data.access_token,
-          spotify_connected: true
-        })
-        .then(({ error }) => {
-          if (error) {
-            console.error(
-              'Spotify persistence failed',
-              error
-            );
-          }
-        });
-    }
   }
 } catch (error) {
   console.error('Token exchange failed:', error);
