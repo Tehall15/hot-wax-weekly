@@ -1068,6 +1068,7 @@ badge="Classic"
 
 function AuthScreen() {
   const [email, setEmail] = useState("");
+const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -1164,6 +1165,18 @@ if (showVerifyMessage) {
           {isLogin ? "Login" : "Create Account"}
         </h2>
 
+{!isLogin && (
+  <input
+    placeholder="Display Name"
+    value={displayName}
+    onChange={e=>setDisplayName(e.target.value)}
+    style={{
+      width:"100%",
+      marginBottom:10,
+      padding:10
+    }}
+  />
+)}
         <input
           placeholder="Email"
           value={email}
