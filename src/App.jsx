@@ -1071,24 +1071,80 @@ function AuthScreen() {
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+const [showVerifyMessage, setShowVerifyMessage] = useState(false);
 
   const handleAuth = async () => {
     setLoading(true);
 
-    if (isLogin) {
-      await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-    } else {
-      await supabase.auth.signUp({
-        email,
-        password
-      });
-    }
+if (isLogin) {
+  await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+} else {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password
+  });
 
-    setLoading(false);
+  if (!error) {
+    setShowVerifyMessage(true);
+  }
+}
+
+setLoading(false);
   };
+
+if (showVerifyMessage) {
+  return (
+    <div style={{
+      display:"flex",
+      height:"100vh",
+      alignItems:"center",
+      justifyContent:"center",
+      background:"#0d0d1a"
+    }}>
+      <div style={{
+        background:"#111122",
+        padding:30,
+        borderRadius:12,
+        width:320,
+        textAlign:"center"
+      }}>
+        <h2 style={{
+          marginBottom:16,
+          color:"#fff"
+        }}>
+          Check your email
+        </h2>
+
+        <p style={{
+          color:"#aaa",
+          lineHeight:1.6,
+          marginBottom:20,
+          fontSize:14
+        }}>
+          We sent you a verification link.
+          <br /><br />
+          Once verified, return here and log in.
+        </p>
+
+        <button
+          onClick={() => {
+            setShowVerifyMessage(false);
+            setIsLogin(true);
+          }}
+          style={{
+            width:"100%",
+            padding:10
+          }}
+        >
+          Verified? Log in
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div style={{
