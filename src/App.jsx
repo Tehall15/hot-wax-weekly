@@ -1151,17 +1151,21 @@ const [showVerifyMessage, setShowVerifyMessage] = useState(false);
     });
 
     if (!error && data.user) {
-      await supabase
-        .from("profiles")
-        .insert([
-          {
-            id: data.user.id,
-            display_name: displayName
-          }
-        ]);
+  try {
+    await supabase
+      .from("profiles")
+      .insert([
+        {
+          id: data.user.id,
+          display_name: displayName
+        }
+      ]);
+  } catch (err) {
+    console.error(err);
+  }
 
-      setShowVerifyMessage(true);
-    }
+  setShowVerifyMessage(true);
+}
   }
 
 setLoading(false);
