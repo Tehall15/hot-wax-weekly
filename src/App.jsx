@@ -573,23 +573,32 @@ useEffect(()=>{
   return;
 }
 
-  (async()=>{
-    const { data } = await supabase
+  (async () => {
+  try {
+    const { data, error } = await supabase
       .from('app_data')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+    }
 
     if (data?.data) {
       const d = data.data;
+
       setReviews(d.reviews || []);
       setListenLater(d.listenLater || []);
-      setTop4All(d.top4All || [null,null,null,null]);
-      setTop4Year(d.top4Year || [null,null,null,null]);
+      setTop4All(d.top4All || [null, null, null, null]);
+      setTop4Year(d.top4Year || [null, null, null, null]);
     }
-
+  } catch (err) {
+    console.error(err);
+  } finally {
     setLoaded(true);
-  })();
+  }
+})();
 }, [user]);
 
 useEffect(() => {
