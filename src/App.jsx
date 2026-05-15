@@ -569,6 +569,7 @@ const [authLoading, setAuthLoading] = useState(false);
 
 useEffect(()=>{
   if (!user) {
+  setLoaded(false);
   return;
 }
 
