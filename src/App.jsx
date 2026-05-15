@@ -466,9 +466,7 @@ const [slots, setSlots] = useState(() => {
   ];
 });  const [weekKey] = useState(getWeekKey());
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
-  const [clientId, setClientId] = useState("");
-  const [clientInput, setClientInput] = useState("");
-  const [showSetup, setShowSetup] = useState(false);
+  const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const [editTop4, setEditTop4] = useState(null);
 
 const [user, setUser] = useState(null);
@@ -495,8 +493,6 @@ useEffect(()=>{
       setListenLater(d.listenLater || []);
       setTop4All(d.top4All || [null,null,null,null]);
       setTop4Year(d.top4Year || [null,null,null,null]);
-      setClientId(d.clientId || "");
-      setClientInput(d.clientId || "");
     }
 
     setLoaded(true);
@@ -580,7 +576,7 @@ useEffect(() => {
   return () => listener.subscription.unsubscribe();
 }, []);
 
-const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid=clientId) => {
+const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year) => {
   setSaving(true);
 
   const payload = {
@@ -588,7 +584,6 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
     listenLater: ll,
     top4All: t4a,
     top4Year: t4y,
-    clientId: cid
   };
 
   await supabase
@@ -597,12 +592,6 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
 
   setSaving(false);
 };
-
-  const saveClient = async () => {
-    setClientId(clientInput);
-    await persist(reviews, listenLater, top4All, top4Year, clientInput);
-    setShowSetup(false);
-  };
 
   const updateSlot = (id, field, val) => setSlots(prev=>prev.map(s=>s.id===id?{...s,[field]:val}:s));
 
@@ -713,42 +702,22 @@ if (!user) {
         <h1 style={{fontSize:26,fontWeight:700,margin:0}}>🔥 Hot Wax Weekly</h1>
         <p style={{color:"#444",fontSize:12,marginTop:4,fontStyle:"italic"}}>your album journal</p>
         <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:8}}>
-          {sp.token
-            ? <span style={{fontSize:11,color:"#1DB954"}}>● Spotify connected</span>
-            : clientId
-              ? <Btn onClick={sp.login} variant="spotify" style={{padding:"5px 14px",fontSize:11}}>Connect Spotify</Btn>
-              : <Btn onClick={()=>setShowSetup(true)} variant="ghost" style={{padding:"5px 14px",fontSize:11}}>⚙ Setup</Btn>
-          }
-          {saving && <span style={{fontSize:10,color:"#444"}}>saving…</span>}
-        </div>
-      </div>
-
-      {showSetup && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={()=>setShowSetup(false)}>
-          <div style={{background:"#12122a",border:"1px solid #2a2a4e",borderRadius:16,padding:24,maxWidth:400,width:"100%"}}
-            onClick={e=>e.stopPropagation()}>
-            <h3 style={{margin:"0 0 8px",fontSize:17}}>Connect Spotify</h3>
-            <p style={{color:"#777",fontSize:13,margin:"0 0 16px"}}>
-              Paste your <strong>Client ID</strong> from developer.spotify.com
-            </p>
-            <input value={clientInput} onChange={e=>setClientInput(e.target.value)}
-              placeholder="Client ID…"
-              style={{width:"100%",background:"#1a1a2e",border:"1px solid #333",borderRadius:8,
-                padding:"10px 14px",color:"#e0e0f0",fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
-            <div style={{display:"flex",gap:8}}>
-              <Btn onClick={saveClient} variant="primary" style={{flex:1}} disabled={!clientInput.trim()}>Save</Btn>
-              <Btn onClick={()=>setShowSetup(false)} variant="ghost">Cancel</Btn>
-            </div>
-          </div>
-        </div>
-      )}
+         {sp.token
+  ? <span style={{fontSize:11,color:"#1DB954"}}>● Spotify connected</span>
+  : <Btn onClick={sp.login} variant="spotify" style={{padding:"5px 14px",fontSize:11}}>
+      Connect Spotify
+    </Btn>
+}
+</div>
 
       <div style={S.tabBar}>
         {tabs.map(([id,lbl])=>(
           <button key={id} style={S.tab(tab===id)} onClick={()=>setTab(id)}>{lbl}</button>
         ))}
       </div>
+
+</div>
+
 
       {tab==="review" && (
         <div>
