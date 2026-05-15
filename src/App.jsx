@@ -397,16 +397,6 @@ const search = async (val) => {
   setOpen(found.length > 0);
 };
 
-const q = val.toLowerCase();
-
-found = LOCAL_DB.filter(
-  (a) =>
-    a.artist.toLowerCase().includes(q) ||
-    a.album.toLowerCase().includes(q)
-).slice(0, 8);
-    setResults(found); setOpen(found.length>0);
-  };
-
   return (
     <div ref={ref} style={{position:"relative",width:"100%"}}>
       <input value={q} onChange={e=>search(e.target.value)} onFocus={()=>q.length>=2&&setOpen(true)}
