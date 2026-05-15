@@ -171,12 +171,12 @@ if (data?.spotify_token) {
 
   if (user) {
     await supabase
-      .from('app_data')
-      .update({
-        spotify_token: data.access_token,
-        spotify_connected: true
-      })
-      .eq('id', user.id);
+  .from('app_data')
+  .upsert({
+    id: user.id,
+    spotify_token: data.access_token,
+    spotify_connected: true
+  });
   }
 }
     } catch (error) {
