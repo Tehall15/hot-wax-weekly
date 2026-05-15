@@ -793,14 +793,14 @@ const updated = [...filtered, ...entries];
 
   if (!loaded) return (
     <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
-      Loading…
+      Data Loading…
     </div>
   );
 
 if (authLoading) {
   return (
     <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
-      Loading…
+      Auth Loading…
     </div>
   );
 }
