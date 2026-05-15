@@ -477,7 +477,10 @@ const [authLoading, setAuthLoading] = useState(true);
   const sp = useSpotify(clientId);
 
 useEffect(()=>{
-  if (!user) return;
+  if (!user) {
+  setLoaded(true);
+  return;
+}
 
   (async()=>{
     const { data } = await supabase
