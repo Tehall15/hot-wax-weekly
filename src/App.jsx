@@ -131,12 +131,12 @@ function useSpotify(clientId) {
   if (data?.spotify_token) {
     setToken(data.spotify_token);
   }
-} catch (err) {
-  console.error("Spotify token load failed", err);
-}
-    };
+    } catch (err) {
+      console.error("Spotify token load failed", err);
+    }
+  };
 
-    loadSpotifyToken();
+  loadSpotifyToken();
 }, [clientId]);
 
   const exchangeCodeForToken = async (code, codeVerifier, clientId) => {
@@ -155,36 +155,49 @@ function useSpotify(clientId) {
     };
 
     try {
-      const response = await fetch('https://accounts.spotify.com/api/token', payload);
-      const data = await response.json();
-      
-     if (data.access_token) {
-  setToken(data.access_token);
+  const response = await fetch(
+    'https://accounts.spotify.com/api/token',
+    payload
+  );
 
-  localStorage.removeItem('code_verifier');
-  window.history.replaceState({}, document.title, window.location.pathname);
+  const data = await response.json();
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  if (data.access_token) {
+    setToken(data.access_token);
 
-  if (user) {
-  supabase
-    .from('app_data')
-    .upsert({
-      id: user.id,
-      spotify_token: data.access_token,
-      spotify_connected: true
-    })
-    .then(({ error }) => {
-      if (error) {
-        console.error("Spotify persistence failed", error);
-      }
-    });
-}
-    } catch (error) {
-      console.error('Token exchange failed:', error);
+    localStorage.removeItem('code_verifier');
+
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.pathname
+    );
+
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      supabase
+        .from('app_data')
+        .upsert({
+          id: user.id,
+          spotify_token: data.access_token,
+          spotify_connected: true
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error(
+              'Spotify persistence failed',
+              error
+            );
+          }
+        });
     }
+  }
+} catch (error) {
+  console.error('Token exchange failed:', error);
+}
   };
 
   const login = async () => {
