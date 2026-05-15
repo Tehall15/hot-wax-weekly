@@ -1145,12 +1145,10 @@ const [showVerifyMessage, setShowVerifyMessage] = useState(false);
       password
     });
   } else {
-   const { data, error } = await supabase.auth.signUp({
-  email,
-  password
-});
-
-console.log("SIGNUP RESULT", { data, error });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password
+    });
 
     if (!error && data.user) {
   try {
