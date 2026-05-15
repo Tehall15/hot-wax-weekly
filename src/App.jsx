@@ -163,17 +163,25 @@ function useSpotify(clientId) {
   const data = await response.json();
 
   if (data.access_token) {
-    setToken(data.access_token);
+  setToken(data.access_token);
 
-    localStorage.removeItem('code_verifier');
+  localStorage.removeItem('code_verifier');
+  window.history.replaceState({}, document.title, window.location.pathname);
 
-    window.history.replaceState(
-      {},
-      document.title,
-      window.location.pathname
-    );
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
+  if (user) {
+    await supabase
+      .from('app_data')
+      .upsert({
+        id: user.id,
+        spotify_token: data.access_token,
+        spotify_connected: true
+      });
   }
+}
 } catch (error) {
   console.error('Token exchange failed:', error);
 }
