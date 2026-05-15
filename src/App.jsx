@@ -477,11 +477,13 @@ const [authLoading, setAuthLoading] = useState(true);
   const sp = useSpotify(clientId);
 
 useEffect(()=>{
+  if (!user) return;
+
   (async()=>{
     const { data } = await supabase
       .from('app_data')
       .select('*')
-      .eq('id', 'main')
+      .eq('id', user.id)
       .single();
 
     if (data?.data) {
@@ -496,7 +498,7 @@ useEffect(()=>{
 
     setLoaded(true);
   })();
-}, []);
+}, [user]);
 
 useEffect(() => {
   if (!loaded) return;
@@ -588,7 +590,7 @@ const persist = async (r=reviews, ll=listenLater, t4a=top4All, t4y=top4Year, cid
 
   await supabase
     .from('app_data')
-    .upsert({ id: "main", data: payload });
+    .upsert({ id: user.id, data: payload });
 
   setSaving(false);
 };
