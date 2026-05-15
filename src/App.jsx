@@ -1167,7 +1167,7 @@ if (showVerifyMessage) {
 
 {!isLogin && (
   <input
-    placeholder="Display Name"
+    placeholder="Name"
     value={displayName}
     onChange={e=>setDisplayName(e.target.value)}
     style={{
