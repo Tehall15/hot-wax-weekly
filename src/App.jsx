@@ -563,7 +563,7 @@ const loadProfile = async (userId) => {
 
   setProfile(data || null);
 };
-const [authLoading, setAuthLoading] = useState(true);
+const [authLoading, setAuthLoading] = useState(false);
 
   const sp = useSpotify(clientId);
 
@@ -796,14 +796,6 @@ const updated = [...filtered, ...entries];
       Data Loading…
     </div>
   );
-
-if (authLoading) {
-  return (
-    <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
-      Auth Loading…
-    </div>
-  );
-}
 
 if (!user) {
   return <AuthScreen />;
