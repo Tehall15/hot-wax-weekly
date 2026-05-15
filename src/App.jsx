@@ -363,15 +363,47 @@ function AlbumSearch({ onSelect, searchFn }) {
     document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
   },[]);
 
-  const search = async (val) => {
-    setQ(val);
-    if (val.length < 2) { setResults([]); setOpen(false); return; }
-    let found = [];
-    if (searchFn) found = await searchFn(val);
-    if (!found || found.length === 0) {
-      const low = val.toLowerCase();
-      found = LOCAL_DB.filter(a=>a.artist.toLowerCase().includes(low)||a.album.toLowerCase().includes(low)).slice(0,8);
-    }
+const search = async (val) => {
+  setQ(val);
+
+  if (val.length < 2) {
+    setResults([]);
+    setOpen(false);
+    return;
+  }
+
+  let found = [];
+
+  if (searchFn) {
+    found = await searchFn(val);
+
+    // If Spotify search was attempted, do NOT silently
+    // fall back to LOCAL_DB. This prevents stale/cached
+    // looking results when Spotify auth/token fails.
+    setResults(found || []);
+    setOpen((found || []).length > 0);
+    return;
+  }
+
+  const q = val.toLowerCase();
+
+  found = LOCAL_DB.filter(
+    (a) =>
+      a.artist.toLowerCase().includes(q) ||
+      a.album.toLowerCase().includes(q)
+  ).slice(0, 8);
+
+  setResults(found);
+  setOpen(found.length > 0);
+};
+
+const q = val.toLowerCase();
+
+found = LOCAL_DB.filter(
+  (a) =>
+    a.artist.toLowerCase().includes(q) ||
+    a.album.toLowerCase().includes(q)
+).slice(0, 8);
     setResults(found); setOpen(found.length>0);
   };
 
