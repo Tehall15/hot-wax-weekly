@@ -115,28 +115,28 @@ function useSpotify(clientId) {
     }
 
     const loadSpotifyToken = async () => {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
       try {
-  const { data } = await supabase
-    .from('app_data')
-    .select('spotify_token')
-    .eq('id', user.id)
-    .maybeSingle();
+        const {
+          data: { user }
+        } = await supabase.auth.getUser();
 
-  if (data?.spotify_token) {
-    setToken(data.spotify_token);
-  }
-    } catch (err) {
-      console.error("Spotify token load failed", err);
-    }
-  };
+        if (!user) return;
 
-  loadSpotifyToken();
+        const { data } = await supabase
+          .from('app_data')
+          .select('spotify_token')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (data?.spotify_token) {
+          setToken(data.spotify_token);
+        }
+      } catch (err) {
+        console.error("Spotify token load failed", err);
+      }
+    };
+
+    loadSpotifyToken();
 }, [clientId]);
 
   const exchangeCodeForToken = async (code, codeVerifier, clientId) => {
@@ -155,33 +155,58 @@ function useSpotify(clientId) {
     };
 
     try {
+  console.log("SPOTIFY: token exchange start");
+
   const response = await fetch(
     'https://accounts.spotify.com/api/token',
     payload
   );
 
+  console.log("SPOTIFY: fetch complete");
+
   const data = await response.json();
 
+  console.log("SPOTIFY: parsed json", data);
+
   if (data.access_token) {
-  setToken(data.access_token);
+    console.log("SPOTIFY: setting token");
 
-  localStorage.removeItem('code_verifier');
-  window.history.replaceState({}, document.title, window.location.pathname);
+    setToken(data.access_token);
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+    console.log("SPOTIFY: token set");
 
-  if (user) {
-    await supabase
-      .from('app_data')
-      .upsert({
-        id: user.id,
-        spotify_token: data.access_token,
-        spotify_connected: true
-      });
+    localStorage.removeItem('code_verifier');
+
+    console.log("SPOTIFY: cleaned verifier");
+
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.pathname
+    );
+
+    console.log("SPOTIFY: cleaned URL");
+
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    console.log("SPOTIFY: got user", user);
+
+    if (user) {
+      console.log("SPOTIFY: persisting token");
+
+      await supabase
+        .from('app_data')
+        .upsert({
+          id: user.id,
+          spotify_token: data.access_token,
+          spotify_connected: true
+        });
+
+      console.log("SPOTIFY: persistence complete");
+    }
   }
-}
 } catch (error) {
   console.error('Token exchange failed:', error);
 }
@@ -371,39 +396,17 @@ function AlbumSearch({ onSelect, searchFn }) {
     document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
   },[]);
 
-const search = async (val) => {
-  setQ(val);
-
-  if (val.length < 2) {
-    setResults([]);
-    setOpen(false);
-    return;
-  }
-
-  let found = [];
-
-  if (searchFn) {
-    found = await searchFn(val);
-
-    // If Spotify search was attempted, do NOT silently
-    // fall back to LOCAL_DB. This prevents stale/cached
-    // looking results when Spotify auth/token fails.
-    setResults(found || []);
-    setOpen((found || []).length > 0);
-    return;
-  }
-
-  const q = val.toLowerCase();
-
-  found = LOCAL_DB.filter(
-    (a) =>
-      a.artist.toLowerCase().includes(q) ||
-      a.album.toLowerCase().includes(q)
-  ).slice(0, 8);
-
-  setResults(found);
-  setOpen(found.length > 0);
-};
+  const search = async (val) => {
+    setQ(val);
+    if (val.length < 2) { setResults([]); setOpen(false); return; }
+    let found = [];
+    if (searchFn) found = await searchFn(val);
+    if (!found || found.length === 0) {
+      const low = val.toLowerCase();
+      found = LOCAL_DB.filter(a=>a.artist.toLowerCase().includes(low)||a.album.toLowerCase().includes(low)).slice(0,8);
+    }
+    setResults(found); setOpen(found.length>0);
+  };
 
   return (
     <div ref={ref} style={{position:"relative",width:"100%"}}>
@@ -552,53 +555,46 @@ const resetWeek = () => {
   const [editTop4, setEditTop4] = useState(null);
 
 const [user, setUser] = useState(null);
-const [profile, setProfile] = useState(null);
-
-const loadProfile = async (userId) => {
-  const { data } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", userId)
-    .single();
-
-  setProfile(data || null);
-};
 const [authLoading, setAuthLoading] = useState(false);
 
   const sp = useSpotify(clientId);
 
-useEffect(()=>{
-  if (!user) {
-  setLoaded(false);
-  return;
-}
+useEffect(() => {
+  if (!user) return;
+
+console.log("HYDRATE START", {
+    user,
+    loaded,
+    reviewsLength: reviews.length
+  });
 
   (async () => {
-  try {
-    const { data, error } = await supabase
-      .from('app_data')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('app_data')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (error) {
-      console.error(error);
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      if (data?.data?.reviews) {
+        const d = data.data;
+
+        setReviews(d.reviews || []);
+        setListenLater(d.listenLater || []);
+        setTop4All(d.top4All || [null, null, null, null]);
+        setTop4Year(d.top4Year || [null, null, null, null]);
+      }
+    } catch (err) {
+      console.error("Review hydration failed", err);
+    } finally {
+      setLoaded(true);
     }
-
-    if (data?.data) {
-      const d = data.data;
-
-      setReviews(d.reviews || []);
-      setListenLater(d.listenLater || []);
-      setTop4All(d.top4All || [null, null, null, null]);
-      setTop4Year(d.top4Year || [null, null, null, null]);
-    }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoaded(true);
-  }
-})();
+  })();
 }, [user]);
 
 useEffect(() => {
@@ -666,42 +662,14 @@ setSlots([
 }, [reviews, loaded]);
 
 useEffect(() => {
-  const initAuth = async () => {
-    try {
-      const { data } = await supabase.auth.getSession();
+  supabase.auth.getSession().then(({ data }) => {
+    setUser(data.session?.user || null);
+    setAuthLoading(false);
+  });
 
-      const currentUser = data.session?.user || null;
-
-      setUser(currentUser);
-
-     setProfile(null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  initAuth();
-
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      const currentUser = session?.user || null;
-
-      setUser(currentUser);
-
-      if (currentUser) {
-        try {
-          await loadProfile(currentUser.id);
-        } catch (err) {
-          console.error(err);
-          setProfile(null);
-        }
-      } else {
-        setProfile(null);
-      }
-    }
-  );
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user || null);
+  });
 
   return () => listener.subscription.unsubscribe();
 }, []);
@@ -791,6 +759,20 @@ const updated = [...filtered, ...entries];
   const completed = slots.filter(s=>s.album&&s.rating>0).length;
   const years = [...new Set(reviews.map(r=>new Date(r.reviewedAt).getFullYear()))].sort((a,b)=>b-a);
 
+  if (!loaded) return (
+    <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
+      Loading…
+    </div>
+  );
+
+if (authLoading) {
+  return (
+    <div style={{background:"#0d0d1a",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#555"}}>
+      Loading…
+    </div>
+  );
+}
+
 if (!user) {
   return <AuthScreen />;
 }
@@ -816,16 +798,7 @@ if (!user) {
     <div style={S.app}>
       <div style={{paddingTop:28,textAlign:"center"}}>
         <h1 style={{fontSize:26,fontWeight:700,margin:0}}>🔥 Hot Wax Weekly</h1>
-        <p style={{
-  color:"#444",
-  fontSize:12,
-  marginTop:4,
-  fontStyle:"italic"
-}}>
-  {profile?.display_name
-    ? `${profile.display_name}'s album journal`
-    : "your album journal"}
-</p>
+        <p style={{color:"#444",fontSize:12,marginTop:4,fontStyle:"italic"}}>your album journal</p>
         <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:8}}>
          {sp.token
   ? <span style={{fontSize:11,color:"#1DB954"}}>● Spotify connected</span>
@@ -1119,99 +1092,27 @@ badge="Classic"
 
 function AuthScreen() {
   const [email, setEmail] = useState("");
-const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-const [showVerifyMessage, setShowVerifyMessage] = useState(false);
 
- const handleAuth = async () => {
-  setLoading(true);
+  const handleAuth = async () => {
+    setLoading(true);
 
-  if (isLogin) {
-    await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-  } else {
-   const { data, error } = await supabase.auth.signUp({
-  email,
-  password
-});
+    if (isLogin) {
+      await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+    } else {
+      await supabase.auth.signUp({
+        email,
+        password
+      });
+    }
 
-console.log("SIGNUP RESULT", { data, error });
-
-    if (!error && data.user) {
-  try {
-    await supabase
-      .from("profiles")
-      .insert([
-        {
-          id: data.user.id,
-          display_name: displayName
-        }
-      ]);
-  } catch (err) {
-    console.error(err);
-  }
-
-  setShowVerifyMessage(true);
-}
-  }
-
-setLoading(false);
+    setLoading(false);
   };
-
-if (showVerifyMessage) {
-  return (
-    <div style={{
-      display:"flex",
-      height:"100vh",
-      alignItems:"center",
-      justifyContent:"center",
-      background:"#0d0d1a"
-    }}>
-      <div style={{
-        background:"#111122",
-        padding:30,
-        borderRadius:12,
-        width:320,
-        textAlign:"center"
-      }}>
-        <h2 style={{
-          marginBottom:16,
-          color:"#fff"
-        }}>
-          Check your email
-        </h2>
-
-        <p style={{
-          color:"#aaa",
-          lineHeight:1.6,
-          marginBottom:20,
-          fontSize:14
-        }}>
-          We sent you a verification link.
-          <br /><br />
-          Once verified, return here and log in.
-        </p>
-
-        <button
-          onClick={() => {
-            setShowVerifyMessage(false);
-            setIsLogin(true);
-          }}
-          style={{
-            width:"100%",
-            padding:10
-          }}
-        >
-          Verified? Log in
-        </button>
-      </div>
-    </div>
-  );
-}
 
   return (
     <div style={{
@@ -1231,18 +1132,6 @@ if (showVerifyMessage) {
           {isLogin ? "Login" : "Create Account"}
         </h2>
 
-{!isLogin && (
-  <input
-    placeholder="Name"
-    value={displayName}
-    onChange={e=>setDisplayName(e.target.value)}
-    style={{
-      width:"100%",
-      marginBottom:10,
-      padding:10
-    }}
-  />
-)}
         <input
           placeholder="Email"
           value={email}
