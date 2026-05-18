@@ -599,7 +599,7 @@ useEffect(()=>{
     setLoaded(true);
   }
 })();
-}, [user, sp.token]);
+}, [user]);
 
 useEffect(() => {
   if (!loaded) return;
