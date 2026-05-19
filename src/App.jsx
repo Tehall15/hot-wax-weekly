@@ -533,7 +533,12 @@ export default function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('[A] onAuthStateChange —', _event, '| user:', session?.user?.id ?? 'none');
-      setUser(session?.user ?? null);
+      setUser(prev => {
+        const next = session?.user ?? null;
+        // Only trigger re-render (and downstream effects) if the user ID actually changed
+        if (prev?.id === next?.id) return prev;
+        return next;
+      });
     });
 
     return () => listener.subscription.unsubscribe();
