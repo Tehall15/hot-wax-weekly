@@ -528,7 +528,11 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       console.log('[A] getSession — user:', data.session?.user?.id ?? 'none');
-      setUser(data.session?.user ?? null);
+      setUser(prev => {
+        const next = data.session?.user ?? null;
+        if (prev?.id === next?.id) return prev;
+        return next;
+      });
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
