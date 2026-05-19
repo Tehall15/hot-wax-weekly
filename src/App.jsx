@@ -52,12 +52,14 @@ export default function App() {
   // Effect B: Hydration only — runs when user is known, never blocks rendering
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
 
     supabase.from("app_data")
       .select("*")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data, error }) => {
+        if (cancelled) return;
         if (error) { console.error("[hydration error]", error); return; }
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
@@ -68,7 +70,9 @@ export default function App() {
         if (d.top4Year) setTop4Year(d.top4Year);
         setSlots(buildSlotsFromReviews(hydratedReviews, getWeekKey()));
       })
-      .catch(err => console.error("[hydration failed]", err));
+      .catch(err => { if (!cancelled) console.error("[hydration failed]", err); });
+
+    return () => { cancelled = true; };
   }, [user]);
 
   // Persistence: fire-and-forget background sync
