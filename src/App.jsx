@@ -103,14 +103,29 @@ export default function App() {
   const updateSlot = (id, field, val) =>
     setSlots(prev => prev.map(s => s.id === id ? { ...s, [field]: val } : s));
 
-  const rollRS = () => {
+  const rollRS = async () => {
     const done = reviews.filter(r => r.type === "rs500").map(r => r.album);
     const pool = RS500.filter(r => !done.includes(r.album));
     const pick = (pool.length > 0 ? pool : RS500)[Math.floor(Math.random() * (pool.length || RS500.length))];
-    updateSlot("rs", "album", { artist: pick.artist, album: pick.album, year: pick.year, rs500Rank: pick.rank });
+
+    // Set immediately with RS500 data — no waiting
+    const base = { artist: pick.artist, album: pick.album, year: pick.year, rs500Rank: pick.rank };
+    updateSlot("rs", "album", base);
     updateSlot("rs", "rating", 0);
     updateSlot("rs", "topTracks", []);
     updateSlot("rs", "notes", "");
+
+    // Silently enrich with Spotify cover + ID if connected
+    if (sp.token) {
+      const results = await sp.searchAlbums(`${pick.artist} ${pick.album}`);
+      if (results?.length > 0) {
+        updateSlot("rs", "album", {
+          ...results[0],
+          year: pick.year,       // keep original RS500 year, not reissue year
+          rs500Rank: pick.rank,
+        });
+      }
+    }
   };
 
   const submit = () => {
