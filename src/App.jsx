@@ -141,7 +141,6 @@ function useSpotify(clientId, user) {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     const codeVerifier = localStorage.getItem('code_verifier');
-    console.log('[C] mount — code in URL:', !!code, '| verifier in storage:', !!codeVerifier);
     if (!code || !codeVerifier) return;
 
     // Clean up immediately so a refresh does not re-process the code
@@ -161,18 +160,14 @@ function useSpotify(clientId, user) {
     })
       .then(r => r.json())
       .then(data => {
-        console.log('[C] token exchange response:', data.access_token ? 'got token' : 'NO TOKEN', data.error ?? '');
         if (!data.access_token) return;
         setToken(data.access_token);
-        // Persist in background — fire and forget, no state coordination
         supabase.auth.getUser().then(({ data: { user } }) => {
-          console.log('[C] persisting spotify token — user:', user?.id ?? 'none');
           if (!user) return;
-          // Use update (not upsert) so we never touch the data column
           supabase.from('app_data')
             .update({ spotify_token: data.access_token, spotify_connected: true })
             .eq('id', user.id)
-            .then(res => console.log('[C] spotify update result:', res.error ?? 'ok'))
+            .then(res => { if (res.error) console.error('[spotify connect error]', res.error); })
             .catch(console.error);
         });
       })
@@ -182,16 +177,15 @@ function useSpotify(clientId, user) {
   // Effect D: Spotify token restore — isolated, depends only on user
   useEffect(() => {
     if (!user) return;
-    console.log('[D] restoring spotify token for user:', user.id);
     supabase.from('app_data')
       .select('spotify_token')
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        console.log('[D] restore result — token:', data?.spotify_token ? 'found' : 'none', '| error:', error ?? 'none');
+        if (error) { console.error('[spotify restore error]', error); return; }
         if (data?.spotify_token) setToken(data.spotify_token);
       })
-      .catch(err => console.error('[D] token restore failed:', err));
+      .catch(err => console.error('[spotify restore failed]', err));
   }, [user]);
 
   const login = async () => {
@@ -527,7 +521,6 @@ export default function App() {
   // Effect A: Auth only — restore session, listen for changes, nothing else
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      console.log('[A] getSession — user:', data.session?.user?.id ?? 'none');
       setUser(prev => {
         const next = data.session?.user ?? null;
         if (prev?.id === next?.id) return prev;
@@ -536,7 +529,6 @@ export default function App() {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('[A] onAuthStateChange —', _event, '| user:', session?.user?.id ?? 'none');
       setUser(prev => {
         const next = session?.user ?? null;
         // Only trigger re-render (and downstream effects) if the user ID actually changed
@@ -551,15 +543,13 @@ export default function App() {
   // Effect B: Review hydration only — runs when user is known, never blocks rendering
   useEffect(() => {
     if (!user) return;
-    console.log('[B] hydrating for user:', user.id);
 
     supabase.from('app_data')
       .select('*')
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        console.log('[B] row:', data ? 'found' : 'null', '| data.data:', data?.data ? 'exists' : 'null', '| reviews:', data?.data?.reviews?.length ?? 0, '| spotify_token:', data?.spotify_token ? 'exists' : 'null', '| error:', error ?? 'none');
-        // Guard: never overwrite good state with an empty/missing payload
+        if (error) { console.error('[hydration error]', error); return; }
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
         const hydratedReviews = d.reviews;
@@ -567,11 +557,9 @@ export default function App() {
         if (d.listenLater?.length) setListenLater(d.listenLater);
         if (d.top4All) setTop4All(d.top4All);
         if (d.top4Year) setTop4Year(d.top4Year);
-        // Initialise slots directly here — no separate effect, no cascading update
         setSlots(buildSlotsFromReviews(hydratedReviews, getWeekKey()));
-        console.log('[B] hydration complete — reviews set:', hydratedReviews.length);
       })
-      .catch(err => console.error("[B] hydration failed:", err));
+      .catch(err => console.error('[hydration failed]', err));
   }, [user]);
 
   // Persistence: fire-and-forget background sync — never blocks the UI
@@ -579,7 +567,7 @@ export default function App() {
     if (!user) return;
     supabase.from('app_data')
       .upsert({ id: user.id, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y } })
-      .then(res => console.log('[persist] reviews:', r.length, '| error:', res.error ?? 'ok'))
+      .then(res => { if (res.error) console.error('[persist error]', res.error); })
       .catch(console.error);
   };
 
