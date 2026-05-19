@@ -6,6 +6,7 @@ const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
 export default function useSpotify(clientId, user) {
   const [token, setToken] = useState(null);
+  const [expired, setExpired] = useState(false);
   const refreshTokenRef = useRef(null);
 
   // Effect C: Spotify OAuth callback — runs once on mount, fully isolated
@@ -120,7 +121,7 @@ export default function useSpotify(clientId, user) {
       });
       if (r.status === 401) {
         const newToken = await refreshAccessToken();
-        if (!newToken) return null;
+        if (!newToken) { setExpired(true); return null; }
         const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
           headers: { Authorization: `Bearer ${newToken}` },
         });
@@ -163,5 +164,18 @@ export default function useSpotify(clientId, user) {
     }));
   };
 
-  return { token, login, searchAlbums, getTracklist, getNewReleases };
+  const disconnect = () => {
+    setToken(null);
+    setExpired(false);
+    refreshTokenRef.current = null;
+    localStorage.removeItem("spotify_refresh_token");
+    if (user) {
+      supabase.from("app_data")
+        .update({ spotify_token: null, spotify_connected: false })
+        .eq("id", user.id)
+        .catch(console.error);
+    }
+  };
+
+  return { token, expired, login, disconnect, searchAlbums, getTracklist, getNewReleases };
 }

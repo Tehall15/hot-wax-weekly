@@ -254,8 +254,14 @@ export default function App() {
           </p>
         )}
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 8 }}>
-          {sp.token
+          {sp.token && !sp.expired
             ? <span style={{ fontSize: 11, color: "#1DB954" }}>● Spotify connected</span>
+            : sp.expired
+            ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: "#ff6b6b" }}>● Spotify disconnected</span>
+                <Btn onClick={() => { sp.disconnect(); sp.login(); }} variant="spotify"
+                  style={{ padding: "4px 12px", fontSize: 11 }}>Reconnect</Btn>
+              </div>
             : <Btn onClick={sp.login} variant="spotify" style={{ padding: "5px 14px", fontSize: 11 }}>
                 Connect Spotify
               </Btn>
