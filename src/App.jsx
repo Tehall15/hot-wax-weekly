@@ -579,6 +579,7 @@ export default function App() {
     if (!user) return;
     supabase.from('app_data')
       .upsert({ id: user.id, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y } })
+      .then(res => console.log('[persist] reviews:', r.length, '| error:', res.error ?? 'ok'))
       .catch(console.error);
   };
 
