@@ -23,7 +23,7 @@ export default function SlotCard({ slot, label, badge, color, updateSlot, rollRS
       {slot.id === "rs" && !slot.album && (
         <>
           <Btn onClick={rollRS} variant="ghost" style={{ width: "100%", marginBottom: 8 }}>
-            🎲 Random Classic
+            🎲 Random pick from Rolling Stone's 500 Greatest Albums
           </Btn>
           <AlbumSearch searchFn={searchFn} onSelect={a => updateSlot("album", a)} />
         </>
