@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,13 +18,16 @@ export default function AuthScreen() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
     } else {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: name.trim() } },
+      });
       if (error) {
         setError(error.message);
       } else if (data.session) {
-        // Email confirmation disabled — user is signed in immediately, nothing to do
+        // Email confirmation disabled — signed in immediately
       } else {
-        // Email confirmation required — show check-your-email message
         setConfirmed(true);
       }
     }
@@ -36,6 +40,8 @@ export default function AuthScreen() {
     background: "#1a1a2e", border: "1px solid #2a2a4e", borderRadius: 8,
     color: "#e0e0f0", fontSize: 14, outline: "none",
   };
+
+  const ready = isLogin ? (email && password) : (email && password && name.trim());
 
   if (confirmed) return (
     <div style={{ display: "flex", height: "100vh", alignItems: "center",
@@ -67,6 +73,18 @@ export default function AuthScreen() {
           {isLogin ? "Sign in" : "Create account"}
         </h2>
 
+        {!isLogin && (
+          <input
+            placeholder="Your name"
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleAuth()}
+            style={inputStyle}
+            autoFocus
+          />
+        )}
+
         <input
           placeholder="Email"
           type="email"
@@ -93,16 +111,16 @@ export default function AuthScreen() {
 
         <button
           onClick={handleAuth}
-          disabled={loading || !email || !password}
+          disabled={loading || !ready}
           style={{ width: "100%", padding: 11, borderRadius: 8, border: "none",
-            background: loading || !email || !password ? "#2a2a3e" : "#F4C542",
-            color: loading || !email || !password ? "#555" : "#0d0d1a",
-            fontWeight: 700, fontSize: 14, cursor: loading || !email || !password ? "not-allowed" : "pointer",
+            background: loading || !ready ? "#2a2a3e" : "#F4C542",
+            color: loading || !ready ? "#555" : "#0d0d1a",
+            fontWeight: 700, fontSize: 14, cursor: loading || !ready ? "not-allowed" : "pointer",
             transition: "all .18s" }}>
           {loading ? "..." : isLogin ? "Sign in" : "Create account"}
         </button>
 
-        <p onClick={() => { setIsLogin(!isLogin); setError(null); }}
+        <p onClick={() => { setIsLogin(!isLogin); setError(null); setName(""); }}
           style={{ marginTop: 16, fontSize: 12, cursor: "pointer", color: "#555",
             textAlign: "center", textDecoration: "underline" }}>
           {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}

@@ -24,6 +24,8 @@ export default function App() {
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const [editTop4, setEditTop4] = useState(null);
   const [user, setUser] = useState(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
@@ -171,6 +173,19 @@ export default function App() {
 
   if (!user) return <AuthScreen />;
 
+  const displayName = user.user_metadata?.display_name;
+  const journalLabel = displayName
+    ? `${displayName}${displayName.endsWith("s") ? "'" : "'s"} album journal`
+    : "your album journal";
+
+  const saveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    await supabase.auth.updateUser({ data: { display_name: trimmed } });
+    setUser(prev => ({ ...prev, user_metadata: { ...prev.user_metadata, display_name: trimmed } }));
+    setEditingName(false);
+  };
+
   const S = {
     app:    { background: "#0d0d1a", minHeight: "100vh", color: "#e0e0f0", fontFamily: "Georgia,serif",
               maxWidth: 720, margin: "0 auto", padding: "0 14px 90px" },
@@ -195,7 +210,34 @@ export default function App() {
     <div style={S.app}>
       <div style={{ paddingTop: 28, textAlign: "center" }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>🔥 Hot Wax Weekly</h1>
-        <p style={{ color: "#444", fontSize: 12, marginTop: 4, fontStyle: "italic" }}>your album journal</p>
+        {editingName ? (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 6 }}>
+            <input
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") saveName();
+                if (e.key === "Escape") setEditingName(false);
+              }}
+              autoFocus
+              placeholder="Your name"
+              style={{ background: "#1a1a2e", border: "1px solid #2a2a4e", borderRadius: 6,
+                padding: "4px 10px", color: "#e0e0f0", fontSize: 13, outline: "none", width: 160 }}
+            />
+            <button onClick={saveName}
+              style={{ background: "#F4C542", border: "none", borderRadius: 6, padding: "4px 10px",
+                color: "#0d0d1a", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Save</button>
+            <button onClick={() => setEditingName(false)}
+              style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer" }}>×</button>
+          </div>
+        ) : (
+          <p style={{ color: "#444", fontSize: 12, marginTop: 4, fontStyle: "italic" }}>
+            {journalLabel}
+            <button onClick={() => { setNameInput(user.user_metadata?.display_name ?? ""); setEditingName(true); }}
+              style={{ background: "none", border: "none", color: "#333", fontSize: 11,
+                cursor: "pointer", marginLeft: 6 }}>✎</button>
+          </p>
+        )}
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 8 }}>
           {sp.token
             ? <span style={{ fontSize: 11, color: "#1DB954" }}>● Spotify connected</span>
