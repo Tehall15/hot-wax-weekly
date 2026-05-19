@@ -42,7 +42,11 @@ export default function useSpotify(clientId, user) {
         supabase.auth.getUser().then(({ data: { user } }) => {
           if (!user) return;
           supabase.from("app_data")
-            .update({ spotify_token: data.access_token, spotify_connected: true })
+            .update({
+              spotify_token: data.access_token,
+              spotify_connected: true,
+              spotify_refresh_token: data.refresh_token ?? null,
+            })
             .eq("id", user.id)
             .then(res => { if (res.error) console.error("[spotify connect error]", res.error); })
             .catch(console.error);
@@ -54,14 +58,18 @@ export default function useSpotify(clientId, user) {
   // Effect D: Spotify token restore — isolated, depends only on user
   useEffect(() => {
     if (!user) return;
-    const stored = localStorage.getItem("spotify_refresh_token");
-    if (stored) refreshTokenRef.current = stored;
     supabase.from("app_data")
-      .select("spotify_token")
+      .select("spotify_token, spotify_refresh_token")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) { console.error("[spotify restore error]", error); return; }
+        // Restore refresh token: Supabase is source of truth, localStorage as fallback
+        const rt = data?.spotify_refresh_token || localStorage.getItem("spotify_refresh_token");
+        if (rt) {
+          refreshTokenRef.current = rt;
+          localStorage.setItem("spotify_refresh_token", rt);
+        }
         if (data?.spotify_token) setToken(data.spotify_token);
       })
       .catch(err => console.error("[spotify restore failed]", err));
@@ -83,9 +91,17 @@ export default function useSpotify(clientId, user) {
       const data = await res.json();
       if (data.access_token) {
         setToken(data.access_token);
-        if (data.refresh_token) {
-          refreshTokenRef.current = data.refresh_token;
-          localStorage.setItem("spotify_refresh_token", data.refresh_token);
+        const newRt = data.refresh_token || refreshTokenRef.current;
+        if (newRt) {
+          refreshTokenRef.current = newRt;
+          localStorage.setItem("spotify_refresh_token", newRt);
+        }
+        // Persist refreshed tokens back to Supabase
+        if (user) {
+          supabase.from("app_data")
+            .update({ spotify_token: data.access_token, spotify_refresh_token: newRt ?? null })
+            .eq("id", user.id)
+            .catch(console.error);
         }
         return data.access_token;
       }
@@ -171,7 +187,7 @@ export default function useSpotify(clientId, user) {
     localStorage.removeItem("spotify_refresh_token");
     if (user) {
       supabase.from("app_data")
-        .update({ spotify_token: null, spotify_connected: false })
+        .update({ spotify_token: null, spotify_refresh_token: null, spotify_connected: false })
         .eq("id", user.id)
         .catch(console.error);
     }
