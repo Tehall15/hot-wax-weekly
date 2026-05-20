@@ -253,6 +253,13 @@ export default function App() {
                 cursor: "pointer", marginLeft: 6 }}>✎</button>
           </p>
         )}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
+          <button onClick={() => supabase.auth.signOut()}
+            style={{ background: "none", border: "none", color: "#333", fontSize: 11,
+              cursor: "pointer", textDecoration: "underline" }}>
+            Sign out
+          </button>
+        </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 8 }}>
           {sp.token && !sp.expired
             ? <span style={{ fontSize: 11, color: "#1DB954" }}>● Spotify connected</span>
