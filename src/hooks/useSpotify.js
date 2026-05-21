@@ -8,7 +8,14 @@ export default function useSpotify(clientId, user) {
   const [token, setToken] = useState(null);
   const [expired, setExpired] = useState(false);
   const refreshTokenRef = useRef(null);
-  const tracklistCache = useRef(new Map());
+  // Persistent cache: survives page refreshes — keyed by spotifyId
+  const persistentCache = useRef(null);
+  if (persistentCache.current === null) {
+    try { persistentCache.current = JSON.parse(localStorage.getItem("hww_tracks") || "{}"); }
+    catch { persistentCache.current = {}; }
+  }
+  // In-flight cache: deduplicates concurrent requests within a session
+  const inflightCache = useRef(new Map());
 
   // Effect C: Spotify OAuth callback — runs once on mount, fully isolated
   useEffect(() => {
@@ -182,18 +189,27 @@ export default function useSpotify(clientId, user) {
 
   const getTracklist = useCallback((spotifyId) => {
     if (!token || !spotifyId) return Promise.resolve([]);
-    // Cache the Promise itself — simultaneous calls for the same album
-    // share one HTTP request instead of each firing their own
-    if (!tracklistCache.current.has(spotifyId)) {
+    // 1. Persistent cache hit — no API call at all
+    if (persistentCache.current[spotifyId]) {
+      return Promise.resolve(persistentCache.current[spotifyId]);
+    }
+    // 2. In-flight dedup — reuse existing request for same album
+    if (!inflightCache.current.has(spotifyId)) {
       const p = api(`albums/${spotifyId}/tracks?limit=50`)
         .then(data => {
           const tracks = data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
-          if (tracks.length === 0) tracklistCache.current.delete(spotifyId); // don't cache failures
+          if (tracks.length > 0) {
+            persistentCache.current[spotifyId] = tracks;
+            try { localStorage.setItem("hww_tracks", JSON.stringify(persistentCache.current)); }
+            catch {} // storage full — non-fatal
+          } else {
+            inflightCache.current.delete(spotifyId); // don't cache failures so retry is possible
+          }
           return tracks;
         });
-      tracklistCache.current.set(spotifyId, p);
+      inflightCache.current.set(spotifyId, p);
     }
-    return tracklistCache.current.get(spotifyId);
+    return inflightCache.current.get(spotifyId);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNewReleases = useCallback(async () => {
