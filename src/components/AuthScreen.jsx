@@ -9,7 +9,6 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
 
   const handleAuth = async () => {
     setError(null);
@@ -19,25 +18,6 @@ export default function AuthScreen() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
     } else {
-      // Validate invite code before creating account
-      const code = inviteCode.trim().toLowerCase();
-      const { data: codeRow, error: codeErr } = await supabase
-        .from("invite_codes")
-        .select("code, used_at")
-        .eq("code", code)
-        .single();
-
-      if (codeErr || !codeRow) {
-        setError("Invalid invite code. Please check and try again.");
-        setLoading(false);
-        return;
-      }
-      if (codeRow.used_at) {
-        setError("That invite code has already been used.");
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -45,20 +25,10 @@ export default function AuthScreen() {
       });
       if (error) {
         setError(error.message);
+      } else if (data.session) {
+        // Email confirmation disabled — signed in immediately
       } else {
-        // Mark code as used
-        if (data.user) {
-          supabase
-            .from("invite_codes")
-            .update({ used_at: new Date().toISOString(), used_by: data.user.id })
-            .eq("code", code)
-            .then(res => { if (res.error) console.error("invite mark failed", res.error); })
-            .catch(console.error);
-        }
-        if (!data.session) {
-          setConfirmed(true);
-        }
-        // if data.session exists, onAuthStateChange in App.jsx handles sign-in
+        setConfirmed(true);
       }
     }
 
@@ -71,9 +41,7 @@ export default function AuthScreen() {
     color: "#e0e0f0", fontSize: 14, outline: "none",
   };
 
-  const ready = isLogin
-    ? (email && password)
-    : (email && password && name.trim() && inviteCode.trim());
+  const ready = isLogin ? (email && password) : (email && password && name.trim());
 
   if (confirmed) return (
     <div style={{ display: "flex", height: "100vh", alignItems: "center",
@@ -131,20 +99,8 @@ export default function AuthScreen() {
           value={password}
           onChange={e => setPassword(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleAuth()}
-          style={{ ...inputStyle, marginBottom: isLogin ? (error ? 10 : 16) : 10 }}
+          style={{ ...inputStyle, marginBottom: error ? 10 : 16 }}
         />
-
-        {!isLogin && (
-          <input
-            placeholder="Invite code (e.g. hww-a1b2c3d4)"
-            type="text"
-            value={inviteCode}
-            onChange={e => setInviteCode(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleAuth()}
-            style={{ ...inputStyle, marginBottom: error ? 10 : 16,
-              fontFamily: "monospace", letterSpacing: "0.05em" }}
-          />
-        )}
 
         {error && (
           <div style={{ marginBottom: 12, padding: "8px 12px", background: "#2a0a0a",
@@ -164,7 +120,7 @@ export default function AuthScreen() {
           {loading ? "..." : isLogin ? "Sign in" : "Create account"}
         </button>
 
-        <p onClick={() => { setIsLogin(!isLogin); setError(null); setName(""); setInviteCode(""); }}
+        <p onClick={() => { setIsLogin(!isLogin); setError(null); setName(""); }}
           style={{ marginTop: 16, fontSize: 12, cursor: "pointer", color: "#555",
             textAlign: "center", textDecoration: "underline" }}>
           {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
