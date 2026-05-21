@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { generateRandomString, sha256, base64encode } from "../utils/pkce";
 
-const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
+const REDIRECT = "https://hww-inspect.vercel.app";
 
 export default function useSpotify(clientId, user) {
   const [token, setToken] = useState(null);
