@@ -7,9 +7,12 @@ export default function SlotCard({ slot, label, badge, color, updateSlot, rollRS
   const [tracks, setTracks] = useState([]);
 
   useEffect(() => {
-    if (slot.album?.spotifyId && getTracklist) {
-      getTracklist(slot.album.spotifyId).then(setTracks);
-    }
+    if (!slot.album?.spotifyId || !getTracklist) return;
+    let cancelled = false;
+    getTracklist(slot.album.spotifyId).then(t => {
+      if (!cancelled && t?.length) setTracks(t);
+    });
+    return () => { cancelled = true; };
   }, [slot.album?.spotifyId, getTracklist]);
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { generateRandomString, sha256, base64encode } from "../utils/pkce";
 
@@ -148,7 +148,7 @@ export default function useSpotify(clientId, user) {
     } catch { return null; }
   };
 
-  const searchAlbums = async (q) => {
+  const searchAlbums = useCallback(async (q) => {
     if (!token || !q) return [];
     const data = await api(`search?q=${encodeURIComponent(q)}&type=album&limit=8`);
     if (!data?.albums?.items) return [];
@@ -159,15 +159,15 @@ export default function useSpotify(clientId, user) {
       year: parseInt(a.release_date?.split("-")[0]) || 0,
       image: a.images?.[1]?.url || a.images?.[0]?.url || null,
     }));
-  };
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getTracklist = async (spotifyId) => {
+  const getTracklist = useCallback(async (spotifyId) => {
     if (!token || !spotifyId) return [];
     const data = await api(`albums/${spotifyId}/tracks?limit=50`);
     return data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
-  };
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getNewReleases = async () => {
+  const getNewReleases = useCallback(async () => {
     if (!token) return [];
     const data = await api("browse/new-releases?limit=20&country=GB");
     if (!data?.albums?.items) return [];
@@ -178,7 +178,7 @@ export default function useSpotify(clientId, user) {
       year: parseInt(a.release_date?.split("-")[0]) || 0,
       image: a.images?.[1]?.url || a.images?.[0]?.url || null,
     }));
-  };
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const disconnect = () => {
     setToken(null);
