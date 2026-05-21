@@ -146,13 +146,21 @@ export default function useSpotify(clientId, user) {
         return await r2.json();
       }
       if (r.status === 429) {
-        const retryAfter = parseInt(r.headers.get("Retry-After") || "2", 10);
-        await new Promise(res => setTimeout(res, retryAfter * 1000));
-        const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
-          headers: { Authorization: `Bearer ${currentToken}` },
-        });
-        if (!r2.ok) return null;
-        return await r2.json();
+        // Retry up to 3 times with Retry-After backoff
+        let last = r;
+        for (let i = 0; i < 3; i++) {
+          const wait = parseInt(last.headers.get("Retry-After") || "3", 10);
+          await new Promise(res => setTimeout(res, wait * 1000));
+          const retry = await fetch(`https://api.spotify.com/v1/${path}`, {
+            headers: { Authorization: `Bearer ${currentToken}` },
+          });
+          if (retry.status !== 429) {
+            if (!retry.ok) return null;
+            return await retry.json();
+          }
+          last = retry;
+        }
+        return null;
       }
       if (!r.ok) return null;
       return await r.json();
@@ -172,15 +180,20 @@ export default function useSpotify(clientId, user) {
     }));
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getTracklist = useCallback(async (spotifyId) => {
-    if (!token || !spotifyId) return [];
-    if (tracklistCache.current.has(spotifyId)) {
-      return tracklistCache.current.get(spotifyId);
+  const getTracklist = useCallback((spotifyId) => {
+    if (!token || !spotifyId) return Promise.resolve([]);
+    // Cache the Promise itself — simultaneous calls for the same album
+    // share one HTTP request instead of each firing their own
+    if (!tracklistCache.current.has(spotifyId)) {
+      const p = api(`albums/${spotifyId}/tracks?limit=50`)
+        .then(data => {
+          const tracks = data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
+          if (tracks.length === 0) tracklistCache.current.delete(spotifyId); // don't cache failures
+          return tracks;
+        });
+      tracklistCache.current.set(spotifyId, p);
     }
-    const data = await api(`albums/${spotifyId}/tracks?limit=50`);
-    const tracks = data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
-    if (tracks.length > 0) tracklistCache.current.set(spotifyId, tracks);
-    return tracks;
+    return tracklistCache.current.get(spotifyId);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNewReleases = useCallback(async () => {
