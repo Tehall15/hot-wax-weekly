@@ -13,6 +13,10 @@ import Top4Tab from "./tabs/Top4Tab";
 import ListenLaterTab from "./tabs/ListenLaterTab";
 import WrapTab from "./tabs/WrapTab";
 
+function slugify(name) {
+  return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
+}
+
 export default function App() {
   const [tab, setTab] = useState("review");
   const [reviews, setReviews] = useState([]);
@@ -108,20 +112,18 @@ export default function App() {
     const pool = RS500.filter(r => !done.includes(r.album));
     const pick = (pool.length > 0 ? pool : RS500)[Math.floor(Math.random() * (pool.length || RS500.length))];
 
-    // Set immediately with RS500 data — no waiting
     const base = { artist: pick.artist, album: pick.album, year: pick.year, rs500Rank: pick.rank };
     updateSlot("rs", "album", base);
     updateSlot("rs", "rating", 0);
     updateSlot("rs", "topTracks", []);
     updateSlot("rs", "notes", "");
 
-    // Silently enrich with Spotify cover + ID if connected
     if (sp.token) {
       const results = await sp.searchAlbums(`${pick.artist} ${pick.album}`);
       if (results?.length > 0) {
         updateSlot("rs", "album", {
           ...results[0],
-          year: pick.year,       // keep original RS500 year, not reissue year
+          year: pick.year,
           rs500Rank: pick.rank,
         });
       }
@@ -193,10 +195,20 @@ export default function App() {
     ? `${displayName}${displayName.endsWith("s") ? "'" : "'s"} album journal`
     : "your album journal";
 
+  const profileUrl = displayName
+    ? `${window.location.origin}/u/${slugify(displayName)}`
+    : null;
+
   const saveName = async () => {
     const trimmed = nameInput.trim();
     if (!trimmed) return;
     await supabase.auth.updateUser({ data: { display_name: trimmed } });
+    // Sync display_name to app_data so public profiles can look up by slug
+    supabase.from("app_data")
+      .update({ display_name: trimmed })
+      .eq("id", user.id)
+      .then(res => { if (res.error) console.error("[display_name sync error]", res.error); })
+      .catch(console.error);
     setUser(prev => ({ ...prev, user_metadata: { ...prev.user_metadata, display_name: trimmed } }));
     setEditingName(false);
   };
@@ -253,7 +265,16 @@ export default function App() {
                 cursor: "pointer", marginLeft: 6 }}>✎</button>
           </p>
         )}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 4 }}>
+          {profileUrl && (
+            <button
+              onClick={() => { navigator.clipboard.writeText(profileUrl); }}
+              title={profileUrl}
+              style={{ background: "none", border: "none", color: "#555", fontSize: 11,
+                cursor: "pointer", textDecoration: "underline" }}>
+              Share profile
+            </button>
+          )}
           <button onClick={() => supabase.auth.signOut()}
             style={{ background: "none", border: "none", color: "#333", fontSize: 11,
               cursor: "pointer", textDecoration: "underline" }}>
