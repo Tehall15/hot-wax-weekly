@@ -7,15 +7,9 @@ export default function SlotCard({ slot, label, badge, color, updateSlot, rollRS
   const [tracks, setTracks] = useState([]);
 
   useEffect(() => {
-    console.log("[SlotCard tracks]", {
-      spotifyId: slot.album?.spotifyId,
-      hasGetTracklist: !!getTracklist,
-      albumName: slot.album?.album,
-    });
     if (!slot.album?.spotifyId || !getTracklist) return;
     let cancelled = false;
     getTracklist(slot.album.spotifyId).then(t => {
-      console.log("[SlotCard tracks result]", { count: t?.length, cancelled });
       if (!cancelled && t?.length) setTracks(t);
     });
     return () => { cancelled = true; };

@@ -8,6 +8,7 @@ export default function useSpotify(clientId, user) {
   const [token, setToken] = useState(null);
   const [expired, setExpired] = useState(false);
   const refreshTokenRef = useRef(null);
+  const tracklistCache = useRef(new Map());
 
   // Effect C: Spotify OAuth callback — runs once on mount, fully isolated
   useEffect(() => {
@@ -144,6 +145,16 @@ export default function useSpotify(clientId, user) {
         if (!r2.ok) return null;
         return await r2.json();
       }
+      if (r.status === 429) {
+        const retryAfter = parseInt(r.headers.get("Retry-After") || "2", 10);
+        await new Promise(res => setTimeout(res, retryAfter * 1000));
+        const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+        if (!r2.ok) return null;
+        return await r2.json();
+      }
+      if (!r.ok) return null;
       return await r.json();
     } catch { return null; }
   };
@@ -163,8 +174,13 @@ export default function useSpotify(clientId, user) {
 
   const getTracklist = useCallback(async (spotifyId) => {
     if (!token || !spotifyId) return [];
+    if (tracklistCache.current.has(spotifyId)) {
+      return tracklistCache.current.get(spotifyId);
+    }
     const data = await api(`albums/${spotifyId}/tracks?limit=50`);
-    return data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
+    const tracks = data?.items?.map((t, i) => ({ num: i + 1, name: t.name })) || [];
+    if (tracks.length > 0) tracklistCache.current.set(spotifyId, tracks);
+    return tracks;
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNewReleases = useCallback(async () => {
