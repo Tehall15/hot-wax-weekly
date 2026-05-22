@@ -142,6 +142,15 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
     }
   };
 
+  const deleteComment = async (reviewId, commentId) => {
+    await supabase.from("comments").delete().eq("id", commentId);
+    setComments(prev => ({
+      ...prev,
+      [reviewId]: (prev[reviewId] || []).filter(c => c.id !== commentId),
+    }));
+    setCommentCounts(prev => ({ ...prev, [reviewId]: Math.max(0, (prev[reviewId] || 1) - 1) }));
+  };
+
   const submitComment = async (reviewId, reviewOwnerId) => {
     const body = (commentInput[reviewId] || "").trim();
     if (!body) return;
@@ -261,9 +270,17 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 10 }}>
                         {comments[r.id].map(c => (
-                          <div key={c.id}>
-                            <span style={{ fontSize: 11, color: "#F4C542", fontWeight: 600 }}>{c.display_name} </span>
-                            <span style={{ fontSize: 12, color: "#aaa" }}>{c.body}</span>
+                          <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontSize: 11, color: "#F4C542", fontWeight: 600 }}>{c.display_name} </span>
+                              <span style={{ fontSize: 12, color: "#aaa" }}>{c.body}</span>
+                            </div>
+                            {(c.user_id === user.id || isMe) && (
+                              <button onClick={() => deleteComment(r.id, c.id)}
+                                style={{ background: "none", border: "none", color: "#444",
+                                  cursor: "pointer", fontSize: 14, lineHeight: 1,
+                                  padding: 0, flexShrink: 0 }}>×</button>
+                            )}
                           </div>
                         ))}
                       </div>
