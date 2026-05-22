@@ -40,16 +40,15 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
         setLoading(false);
       });
 
-    // Load ALL notifications for the feed
-    supabase.from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data, error }) => {
-        console.log("[notifications feed]", data, error);
-        setAllNotifications(data || []);
-      });
+    // Load all notifications: fetch unread + read separately and merge
+    Promise.all([
+      supabase.from("notifications").select("*").eq("user_id", user.id).eq("read", false).order("created_at", { ascending: false }),
+      supabase.from("notifications").select("*").eq("user_id", user.id).eq("read", true).order("created_at", { ascending: false }).limit(49),
+    ]).then(([{ data: unread }, { data: read }]) => {
+      const merged = [...(unread || []), ...(read || [])]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setAllNotifications(merged);
+    });
   }, [user]);
 
   const follow = async (targetId) => {
