@@ -378,10 +378,8 @@ export default function App() {
                 cursor: "pointer", marginLeft: 6 }}>✎</button>
           </p>
         )}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginTop: 10 }}>
           <RecordIcon count={notifications.length} onClick={() => setPanelOpen(true)} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, marginTop: 10 }}>
           {profileUrl && (
             <button onClick={() => navigator.clipboard.writeText(profileUrl)} title={profileUrl}
               style={{ background: "none", border: "none", color: "#555", fontSize: 11,
@@ -389,7 +387,6 @@ export default function App() {
               🎤 Share profile
             </button>
           )}
-          {profileUrl && <span style={{ color: "#2a2a4e", fontSize: 11 }}>·</span>}
           <button onClick={() => supabase.auth.signOut()}
             style={{ background: "none", border: "none", color: "#444", fontSize: 11,
               cursor: "pointer" }}>
