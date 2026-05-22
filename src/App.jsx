@@ -52,6 +52,7 @@ export default function App() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [notifications, setNotifications] = useState([]);
+  const [notifFeed, setNotifFeed] = useState([]); // full panel feed — survives mark-as-read
   const [panelOpen, setPanelOpen] = useState(false);
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
@@ -135,7 +136,18 @@ export default function App() {
       .eq("user_id", user.id)
       .eq("read", false)
       .order("created_at", { ascending: false })
-      .then(({ data }) => setNotifications(data || []));
+      .then(({ data }) => {
+        const unread = data || [];
+        setNotifications(unread);
+        // Seed the panel feed with these unread items
+        if (unread.length > 0) {
+          setNotifFeed(prev => {
+            const existingIds = new Set(prev.map(n => n.id));
+            const fresh = unread.filter(n => !existingIds.has(n.id));
+            return [...fresh, ...prev].slice(0, 50);
+          });
+        }
+      });
 
     const channel = supabase.channel("notifications")
       .on("postgres_changes", {
@@ -143,6 +155,7 @@ export default function App() {
         filter: `user_id=eq.${user.id}`,
       }, payload => {
         setNotifications(prev => [payload.new, ...prev]);
+        setNotifFeed(prev => [payload.new, ...prev].slice(0, 50));
       })
       .subscribe();
 
@@ -156,6 +169,8 @@ export default function App() {
       .eq("user_id", user.id)
       .eq("read", false);
     setNotifications([]);
+    // Mark items as read in the feed so the red borders clear — but keep them visible
+    setNotifFeed(prev => prev.map(n => n.read ? n : { ...n, read: true }));
   };
 
   const persist = (r = reviews, ll = listenLater, t4a = top4All, t4y = top4Year) => {
@@ -419,6 +434,7 @@ export default function App() {
         <FriendsPanel
           user={user}
           notifications={notifications}
+          notifFeed={notifFeed}
           onClose={() => setPanelOpen(false)}
           onNotificationsRead={() => { markNotificationsRead(); }}
         />
