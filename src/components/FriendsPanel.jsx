@@ -46,7 +46,10 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50)
-      .then(({ data }) => setAllNotifications(data || []));
+      .then(({ data, error }) => {
+        console.log("[notifications feed]", data, error);
+        setAllNotifications(data || []);
+      });
   }, [user]);
 
   const follow = async (targetId) => {
