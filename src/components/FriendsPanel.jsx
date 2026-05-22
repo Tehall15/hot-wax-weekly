@@ -81,8 +81,10 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
                 <div key={n.id} style={{ fontSize: 13, color: "#ccc", lineHeight: 1.4 }}>
                   {n.type === "follow"
                     ? <><span style={{ color: "#F4C542", fontWeight: 600 }}>{n.from_display_name}</span> started following you</>
-                    : n.type === "like"
-                    ? <><span style={{ color: "#F4C542", fontWeight: 600 }}>{n.from_display_name}</span> liked your review</>
+                    : n.type === "reaction"
+                    ? <><span style={{ color: "#F4C542", fontWeight: 600 }}>{n.from_display_name}</span> reacted to your review</>
+                    : n.type === "comment"
+                    ? <><span style={{ color: "#F4C542", fontWeight: 600 }}>{n.from_display_name}</span> commented on your review</>
                     : <span style={{ color: "#888" }}>{n.type}</span>
                   }
                 </div>

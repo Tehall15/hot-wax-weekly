@@ -191,17 +191,101 @@ function CoversGrid({ reviews }) {
   );
 }
 
+function computeStreak(reviews) {
+  const weekKeys = new Set(reviews.filter(r => r.weekKey).map(r => r.weekKey));
+  let streak = 0;
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+  monday.setHours(0, 0, 0, 0);
+  let d = new Date(monday);
+  while (true) {
+    const key = d.toISOString().split("T")[0];
+    if (weekKeys.has(key)) { streak++; d.setDate(d.getDate() - 7); }
+    else break;
+  }
+  return streak;
+}
+
+function StatsSection({ reviews }) {
+  if (reviews.length === 0) return null;
+  const total = reviews.length;
+  const avg = (reviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1);
+  const best = [...reviews].sort((a, b) => b.rating - a.rating)[0];
+  const streak = computeStreak(reviews);
+  const dist = {};
+  for (let i = 1; i <= 10; i++) dist[i] = reviews.filter(r => r.rating === i).length;
+  const maxDist = Math.max(...Object.values(dist), 1);
+
+  return (
+    <div style={{ ...card, marginTop: 14 }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555", marginBottom: 14 }}>
+        Stats
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+        {[
+          { label: "Reviews", value: total },
+          { label: "Avg Rating", value: `${avg}/10` },
+          { label: "Week Streak", value: `${streak}🔥` },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#F4C542" }}>{value}</div>
+            <div style={{ fontSize: 10, color: "#555", marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      {best && (
+        <div style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 12px", marginBottom: 16,
+          display: "flex", gap: 10, alignItems: "center" }}>
+          <AlbumArt src={best.image} size={40} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Highest Rated</div>
+            <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{best.album}</div>
+            <div style={{ fontSize: 11, color: "#888" }}>{best.artist}</div>
+          </div>
+          <div style={{ color: "#F4C542", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>{best.rating}/10</div>
+        </div>
+      )}
+      {/* Rating distribution */}
+      <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Rating Distribution</div>
+      <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 40 }}>
+        {[1,2,3,4,5,6,7,8,9,10].map(n => (
+          <div key={n} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+            <div style={{ width: "100%", background: "#F4C542",
+              height: `${Math.max(2, (dist[n] / maxDist) * 32)}px`,
+              borderRadius: 2, opacity: dist[n] ? 1 : 0.15 }} />
+            <div style={{ fontSize: 8, color: "#444" }}>{n}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function YearWrap({ reviews }) {
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const years = [...new Set(reviews.map(r => new Date(r.reviewedAt).getFullYear()))].sort((a, b) => b - a);
-  const yearReviews = reviews.filter(r => new Date(r.reviewedAt).getFullYear() === wrapYear);
+  const yr = reviews.filter(r => new Date(r.reviewedAt).getFullYear() === wrapYear);
+
+  const avgYr = yr.length ? (yr.reduce((s, r) => s + r.rating, 0) / yr.length).toFixed(1) : null;
+  const bestYr = yr.length ? [...yr].sort((a, b) => b.rating - a.rating)[0] : null;
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthCounts = yr.reduce((acc, r) => {
+    const m = new Date(r.reviewedAt).getMonth();
+    acc[m] = (acc[m] || 0) + 1;
+    return acc;
+  }, {});
+  const busyMonth = Object.keys(monthCounts).length
+    ? months[Number(Object.entries(monthCounts).sort((a,b) => b[1]-a[1])[0][0])]
+    : null;
 
   return (
     <div style={{ ...card, marginTop: 14 }}>
       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555", marginBottom: 12 }}>
         Year Wrap
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {(years.length > 0 ? years : [NOW_YEAR]).map(y => (
           <button key={y} onClick={() => setWrapYear(y)}
             style={{ padding: "5px 14px", borderRadius: 20,
@@ -212,13 +296,36 @@ function YearWrap({ reviews }) {
           </button>
         ))}
       </div>
-      {yearReviews.length === 0
-        ? <div style={{ color: "#555", fontSize: 13 }}>No reviews for {wrapYear}.</div>
-        : <div style={{ fontSize: 20, fontWeight: 700, color: "#F4C542" }}>
-            {yearReviews.length} albums
-            <span style={{ fontSize: 13, fontWeight: 400, color: "#888", marginLeft: 8 }}>reviewed in {wrapYear}</span>
+      {yr.length === 0 ? (
+        <div style={{ color: "#555", fontSize: 13 }}>No reviews for {wrapYear}.</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {[
+              { label: "Albums", value: yr.length },
+              { label: "Avg Rating", value: `${avgYr}/10` },
+              { label: "Best Month", value: busyMonth || "—" },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#F4C542" }}>{value}</div>
+                <div style={{ fontSize: 9, color: "#555", marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+              </div>
+            ))}
           </div>
-      }
+          {bestYr && (
+            <div style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 12px",
+              display: "flex", gap: 10, alignItems: "center" }}>
+              <AlbumArt src={bestYr.image} size={36} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Top Album of {wrapYear}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bestYr.album}</div>
+                <div style={{ fontSize: 11, color: "#888" }}>{bestYr.artist}</div>
+              </div>
+              <div style={{ color: "#F4C542", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>{bestYr.rating}/10</div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -273,6 +380,7 @@ export default function CollectionTab({ reviews, top4All, top4Year, editTop4, se
 
   return (
     <div>
+      <StatsSection reviews={reviews} />
       <Top4Section reviews={reviews} top4All={top4All} top4Year={top4Year}
         editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} swapTop={swapTop} sp={sp} />
       <div style={{ ...card, marginTop: 10 }}>
