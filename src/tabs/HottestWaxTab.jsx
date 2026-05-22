@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import AvatarDisplay from "../components/AvatarDisplay";
 
 function slugify(name) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
@@ -29,7 +30,7 @@ function AlbumArt({ src, size = 52 }) {
 const EMOJIS = ["🔥", "✨", "💿", "😮"];
 const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
+export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAvatar }) {
   const [friendItems, setFriendItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reactions, setReactions] = useState({});
@@ -56,7 +57,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
             const items = [];
             (rows || []).forEach(row => {
               (row.data?.reviews || []).forEach(r => {
-                items.push({ review: r, displayName: row.display_name, userId: row.id, isMe: false });
+                items.push({ review: r, displayName: row.display_name, userId: row.id, isMe: false, avatar: row.data?.avatar || null });
               });
             });
             setFriendItems(items);
@@ -66,7 +67,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
   }, [user]);
 
   // Merge own + friend reviews into feed
-  const ownItems = (ownReviews || []).map(r => ({ review: r, displayName, userId: user?.id, isMe: true }));
+  const ownItems = (ownReviews || []).map(r => ({ review: r, displayName, userId: user?.id, isMe: true, avatar: userAvatar }));
   const feed = [...ownItems, ...friendItems]
     .sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt))
     .slice(0, 60);
@@ -186,19 +187,14 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
   return (
     <div style={card}>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {feed.map(({ review: r, displayName: dn, userId, isMe }, i) => (
+        {feed.map(({ review: r, displayName: dn, userId, isMe, avatar: av }, i) => (
           <div key={r.id} style={{
             padding: "14px 0",
             borderBottom: i < feed.length - 1 ? "1px solid #1a1a2e" : "none"
           }}>
             {/* Reviewer header */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%",
-                background: isMe ? "#1a1a2e" : "#1a1a3e", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, color: isMe ? "#555" : "#F4C542", fontWeight: 700 }}>
-                {dn[0].toUpperCase()}
-              </div>
+              <AvatarDisplay avatar={av} name={dn} size={28} muted={isMe} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 {isMe ? (
                   <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>You</span>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import AvatarDisplay from "./AvatarDisplay";
 
 function slugify(name) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
@@ -32,7 +33,7 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
       .then(({ data }) => setFollowing((data || []).map(r => r.following_id)));
 
     supabase.from("app_data")
-      .select("id, display_name")
+      .select("id, display_name, data")
       .not("display_name", "is", null)
       .then(({ data }) => {
         setAllUsers((data || []).filter(u => u.id !== user?.id && u.display_name));
@@ -152,11 +153,7 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
                   return (
                     <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1a1a3e",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 14, color: "#F4C542", flexShrink: 0 }}>
-                          {u.display_name[0].toUpperCase()}
-                        </div>
+                        <AvatarDisplay avatar={u.data?.avatar} name={u.display_name} size={34} />
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{u.display_name}</div>
                           <a href={`/u/${slugify(u.display_name)}`}

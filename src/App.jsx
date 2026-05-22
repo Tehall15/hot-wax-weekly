@@ -6,6 +6,8 @@ import { RS500 } from "./utils/data";
 import { NOW_YEAR, getWeekKey } from "./utils/time";
 import AuthScreen from "./components/AuthScreen";
 import FriendsPanel from "./components/FriendsPanel";
+import AvatarDisplay from "./components/AvatarDisplay";
+import AvatarPicker from "./components/AvatarPicker";
 import { Btn } from "./components/ui";
 import ReviewTab from "./tabs/ReviewTab";
 import HistoryTab from "./tabs/HistoryTab";
@@ -54,6 +56,8 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [notifFeed, setNotifFeed] = useState([]); // full panel feed — survives mark-as-read
   const [panelOpen, setPanelOpen] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
@@ -109,6 +113,7 @@ export default function App() {
             .upsert({ id: user.id, display_name: dn, data: data?.data || {} })
             .then(() => {});
         }
+        if (data?.data?.avatar) setAvatar(data.data.avatar);
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
         setReviews(d.reviews);
@@ -167,13 +172,19 @@ export default function App() {
     setNotifFeed(prev => prev.map(n => n.read ? n : { ...n, read: true }));
   };
 
-  const persist = (r = reviews, ll = listenLater, t4a = top4All, t4y = top4Year) => {
+  const persist = (r = reviews, ll = listenLater, t4a = top4All, t4y = top4Year, av = avatar) => {
     if (!user) return;
     const dn = user.user_metadata?.display_name || null;
     supabase.from("app_data")
-      .upsert({ id: user.id, display_name: dn, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y } })
+      .upsert({ id: user.id, display_name: dn, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y, avatar: av } })
       .then(res => { if (res.error) console.error("[persist error]", res.error); })
       .catch(console.error);
+  };
+
+  const updateAvatar = (val) => {
+    setAvatar(val);
+    persist(reviews, listenLater, top4All, top4Year, val);
+    setAvatarPickerOpen(false);
   };
 
   const shiftWeek = (days) => {
@@ -371,12 +382,16 @@ export default function App() {
               style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer" }}>×</button>
           </div>
         ) : (
-          <p style={{ color: "#444", fontSize: 12, marginTop: 4, fontStyle: "italic" }}>
-            {journalLabel}
-            <button onClick={() => { setNameInput(user.user_metadata?.display_name ?? ""); setEditingName(true); }}
-              style={{ background: "none", border: "none", color: "#333", fontSize: 11,
-                cursor: "pointer", marginLeft: 6 }}>✎</button>
-          </p>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 6 }}>
+            <AvatarDisplay avatar={avatar} name={displayName} size={32}
+              onClick={() => setAvatarPickerOpen(true)} muted />
+            <p style={{ color: "#444", fontSize: 12, margin: 0, fontStyle: "italic" }}>
+              {journalLabel}
+              <button onClick={() => { setNameInput(user.user_metadata?.display_name ?? ""); setEditingName(true); }}
+                style={{ background: "none", border: "none", color: "#333", fontSize: 11,
+                  cursor: "pointer", marginLeft: 6 }}>✎</button>
+            </p>
+          </div>
         )}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, marginTop: 10 }}>
           <RecordIcon count={notifications.length} onClick={() => setPanelOpen(true)} />
@@ -419,12 +434,22 @@ export default function App() {
       {tab === "review"     && <ReviewTab slots={slots} weekKey={weekKey} shiftWeek={shiftWeek}
                                   resetWeek={resetWeek} updateSlot={updateSlot} rollRS={rollRS}
                                   sp={sp} completed={completed} submit={submit} onSavePast={addPastReview} />}
-      {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} addLL={addLL} />}
+      {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} addLL={addLL} userAvatar={avatar} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
                                   editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} swapTop={swapTop} del={del} sp={sp} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
       {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
                                   removeLL={removeLL} sp={sp} onMoveToReview={pushToReview} />}
+
+      {avatarPickerOpen && (
+        <AvatarPicker
+          currentAvatar={avatar}
+          displayName={displayName}
+          sp={sp}
+          onSave={updateAvatar}
+          onClose={() => setAvatarPickerOpen(false)}
+        />
+      )}
 
       {panelOpen && (
         <FriendsPanel
