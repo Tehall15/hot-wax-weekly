@@ -20,15 +20,19 @@ function slugify(name) {
 function RecordIcon({ count, onClick }) {
   return (
     <button onClick={onClick} style={{ position: "relative", background: "none", border: "none",
-      cursor: "pointer", padding: 0, lineHeight: 1 }} title="Friends & Notifications">
-      <span style={{ fontSize: 20 }}>💿</span>
-      {count > 0 && (
-        <span style={{ position: "absolute", top: -4, right: -6, background: "#F4C542",
-          color: "#0d0d1a", borderRadius: "50%", width: 16, height: 16, fontSize: 10,
-          fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {count > 9 ? "9+" : count}
-        </span>
-      )}
+      cursor: "pointer", padding: 0, lineHeight: 1, display: "flex", flexDirection: "column",
+      alignItems: "center", gap: 2 }} title="Friends & Notifications">
+      <span style={{ position: "relative", lineHeight: 1 }}>
+        <span style={{ fontSize: 20 }}>💿</span>
+        {count > 0 && (
+          <span style={{ position: "absolute", top: -4, right: -6, background: "#F4C542",
+            color: "#0d0d1a", borderRadius: "50%", width: 16, height: 16, fontSize: 10,
+            fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {count > 9 ? "9+" : count}
+          </span>
+        )}
+      </span>
+      <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>Find bandmates</span>
     </button>
   );
 }
