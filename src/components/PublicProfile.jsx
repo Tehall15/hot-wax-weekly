@@ -27,9 +27,46 @@ function AlbumArt({ src, size = 48 }) {
 }
 
 export default function PublicProfile({ slug }) {
-  const [profile, setProfile] = useState(null);  // { displayName, reviews, top4All, top4Year }
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setCurrentUser(data.session?.user ?? null);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || !profileUserId) return;
+    supabase.from("follows")
+      .select("follower_id")
+      .eq("follower_id", currentUser.id)
+      .eq("following_id", profileUserId)
+      .maybeSingle()
+      .then(({ data }) => setIsFollowing(!!data));
+  }, [currentUser, profileUserId]);
+
+  const follow = async () => {
+    if (!currentUser) return;
+    await supabase.from("follows").insert({ follower_id: currentUser.id, following_id: profileUserId });
+    const myName = currentUser.user_metadata?.display_name || "Someone";
+    await supabase.from("notifications").insert({
+      user_id: profileUserId, type: "follow",
+      from_user_id: currentUser.id, from_display_name: myName,
+    });
+    setIsFollowing(true);
+  };
+
+  const unfollow = async () => {
+    if (!currentUser) return;
+    await supabase.from("follows").delete()
+      .eq("follower_id", currentUser.id).eq("following_id", profileUserId);
+    setIsFollowing(false);
+  };
 
   useEffect(() => {
     supabase
@@ -40,6 +77,7 @@ export default function PublicProfile({ slug }) {
         const match = (rows || []).find(r => slugify(r.display_name) === slug);
         if (!match) { setNotFound(true); setLoading(false); return; }
         const d = match.data || {};
+        setProfileUserId(match.id);
         setProfile({
           displayName: match.display_name,
           reviews: d.reviews || [],
@@ -103,6 +141,16 @@ export default function PublicProfile({ slug }) {
         <p style={{ color: "#333", fontSize: 11, marginTop: 6 }}>
           {profile.reviews.length} album{profile.reviews.length !== 1 ? "s" : ""} reviewed
         </p>
+        {currentUser && currentUser.id !== profileUserId && (
+          <button
+            onClick={isFollowing ? unfollow : follow}
+            style={{ marginTop: 8, background: isFollowing ? "transparent" : "#F4C542",
+              border: isFollowing ? "1px solid #333" : "none",
+              borderRadius: 8, padding: "7px 20px", fontSize: 13, cursor: "pointer",
+              color: isFollowing ? "#555" : "#0d0d1a", fontWeight: 600 }}>
+            {isFollowing ? "Following" : "Follow"}
+          </button>
+        )}
       </div>
 
       {/* Top 4 */}

@@ -12,9 +12,26 @@ import CoversTab from "./tabs/CoversTab";
 import Top4Tab from "./tabs/Top4Tab";
 import ListenLaterTab from "./tabs/ListenLaterTab";
 import WrapTab from "./tabs/WrapTab";
+import FriendsTab from "./tabs/FriendsTab";
 
 function slugify(name) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
+}
+
+function RecordIcon({ count, onClick }) {
+  return (
+    <button onClick={onClick} style={{ position: "relative", background: "none", border: "none",
+      cursor: "pointer", padding: 0, lineHeight: 1 }} title="Notifications">
+      <span style={{ fontSize: 20 }}>💿</span>
+      {count > 0 && (
+        <span style={{ position: "absolute", top: -4, right: -6, background: "#F4C542",
+          color: "#0d0d1a", borderRadius: "50%", width: 16, height: 16, fontSize: 10,
+          fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
+    </button>
+  );
 }
 
 export default function App() {
@@ -30,11 +47,12 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [notifications, setNotifications] = useState([]);
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
 
-  // Effect A: Auth only — restore session, listen for changes
+  // Effect A: Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(prev => {
@@ -55,7 +73,7 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Effect B: Hydration only — runs when user is known, never blocks rendering
+  // Effect B: Hydration
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -69,19 +87,49 @@ export default function App() {
         if (error) { console.error("[hydration error]", error); return; }
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
-        const hydratedReviews = d.reviews;
-        setReviews(hydratedReviews);
+        setReviews(d.reviews);
         if (d.listenLater?.length) setListenLater(d.listenLater);
         if (d.top4All) setTop4All(d.top4All);
         if (d.top4Year) setTop4Year(d.top4Year);
-        setSlots(buildSlotsFromReviews(hydratedReviews, getWeekKey()));
+        setSlots(buildSlotsFromReviews(d.reviews, getWeekKey()));
       })
       .catch(err => { if (!cancelled) console.error("[hydration failed]", err); });
 
     return () => { cancelled = true; };
   }, [user]);
 
-  // Persistence: fire-and-forget background sync
+  // Effect: Load notifications
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("read", false)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setNotifications(data || []));
+
+    // Realtime subscription
+    const channel = supabase.channel("notifications")
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, payload => {
+        setNotifications(prev => [payload.new, ...prev]);
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [user]);
+
+  const markNotificationsRead = async () => {
+    if (notifications.length === 0) return;
+    await supabase.from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    setNotifications([]);
+  };
+
   const persist = (r = reviews, ll = listenLater, t4a = top4All, t4y = top4Year) => {
     if (!user) return;
     supabase.from("app_data")
@@ -121,11 +169,7 @@ export default function App() {
     if (sp.token) {
       const results = await sp.searchAlbums(`${pick.artist} ${pick.album}`);
       if (results?.length > 0) {
-        updateSlot("rs", "album", {
-          ...results[0],
-          year: pick.year,
-          rs500Rank: pick.rank,
-        });
+        updateSlot("rs", "album", { ...results[0], year: pick.year, rs500Rank: pick.rank });
       }
     }
   };
@@ -203,7 +247,6 @@ export default function App() {
     const trimmed = nameInput.trim();
     if (!trimmed) return;
     await supabase.auth.updateUser({ data: { display_name: trimmed } });
-    // Sync display_name to app_data so public profiles can look up by slug
     supabase.from("app_data")
       .update({ display_name: trimmed })
       .eq("id", user.id)
@@ -230,6 +273,7 @@ export default function App() {
     ["covers",  "Covers"],
     ["top4",    "Top 4"],
     ["listen",  "Listen Later"],
+    ["friends", "Friends"],
     ["wrap",    "Year Wrap"],
   ];
 
@@ -265,11 +309,13 @@ export default function App() {
                 cursor: "pointer", marginLeft: 6 }}>✎</button>
           </p>
         )}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 4 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 4 }}>
+          <RecordIcon count={notifications.length} onClick={() => {
+            setTab("friends");
+            markNotificationsRead();
+          }} />
           {profileUrl && (
-            <button
-              onClick={() => { navigator.clipboard.writeText(profileUrl); }}
-              title={profileUrl}
+            <button onClick={() => navigator.clipboard.writeText(profileUrl)} title={profileUrl}
               style={{ background: "none", border: "none", color: "#555", fontSize: 11,
                 cursor: "pointer", textDecoration: "underline" }}>
               Share profile
@@ -311,6 +357,7 @@ export default function App() {
                                 editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} />}
       {tab === "listen"   && <ListenLaterTab listenLater={listenLater} addLL={addLL}
                                 removeLL={removeLL} sp={sp} />}
+      {tab === "friends"  && <FriendsTab user={user} />}
       {tab === "wrap"     && <WrapTab reviews={reviews} wrapYear={wrapYear} setWrapYear={setWrapYear} />}
     </div>
   );
