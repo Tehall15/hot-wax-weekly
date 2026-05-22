@@ -20,7 +20,8 @@ function timeAgo(ts) {
 export default function FriendsPanel({ user, notifications, onClose, onNotificationsRead }) {
   const [following, setFollowing] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const [allNotifications, setAllNotifications] = useState([]);
+  // Seed allNotifications with the already-working unread items from App.jsx
+  const [allNotifications, setAllNotifications] = useState(notifications);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState(notifications.length > 0 ? "notifications" : "friends");
@@ -40,16 +41,28 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
         setLoading(false);
       });
 
-    // Load all notifications: fetch unread + read separately and merge
-    Promise.all([
-      supabase.from("notifications").select("*").eq("user_id", user.id).eq("read", false).order("created_at", { ascending: false }),
-      supabase.from("notifications").select("*").eq("user_id", user.id).eq("read", true).order("created_at", { ascending: false }).limit(49),
-    ]).then(([{ data: unread }, { data: read }]) => {
-      const merged = [...(unread || []), ...(read || [])]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setAllNotifications(merged);
-    });
+    // Fetch historical (read=true) notifications and merge with the unread ones we already have
+    supabase.from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("read", true)
+      .order("created_at", { ascending: false })
+      .limit(49)
+      .then(({ data }) => {
+        setAllNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newRead = (data || []).filter(n => !existingIds.has(n.id));
+          return [...prev, ...newRead].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        });
+      });
   }, [user]);
+
+  // When App.jsx marks notifications as read (prop empties), update read flags locally
+  useEffect(() => {
+    if (notifications.length === 0) {
+      setAllNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    }
+  }, [notifications.length]);
 
   const follow = async (targetId) => {
     await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
