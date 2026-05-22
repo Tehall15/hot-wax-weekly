@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import AvatarDisplay from "../components/AvatarDisplay";
+import RecommendModal from "../components/RecommendModal";
 
 function slugify(name) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
@@ -38,6 +39,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
   const [openComments, setOpenComments] = useState({});
   const [comments, setComments] = useState({});
   const [commentInput, setCommentInput] = useState({});
+  const [recommendAlbum, setRecommendAlbum] = useState(null);
 
   const displayName = user?.user_metadata?.display_name || "You";
 
@@ -185,6 +187,14 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
   );
 
   return (
+    <>
+    {recommendAlbum && (
+      <RecommendModal
+        album={recommendAlbum}
+        user={user}
+        onClose={() => setRecommendAlbum(null)}
+      />
+    )}
     <div style={card}>
       <div style={{ display: "flex", flexDirection: "column" }}>
         {feed.map(({ review: r, displayName: dn, userId, isMe, avatar: av }, i) => (
@@ -265,6 +275,14 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
                         + Later
                       </button>
                     )}
+                    <button
+                      onClick={() => setRecommendAlbum({ artist: r.artist, album: r.album,
+                        image: r.image, year: r.year, spotifyId: r.spotifyId })}
+                      style={{ background: "none", border: "none", color: "#555",
+                        cursor: "pointer", fontSize: 11, padding: 0 }}
+                      title="Recommend to a friend">
+                      ↗ Rec
+                    </button>
                     <button onClick={() => toggleComments(r.id)}
                       style={{ background: "none", border: "none",
                         color: openComments[r.id] ? "#aaa" : "#555",
@@ -323,5 +341,6 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
         ))}
       </div>
     </div>
+    </>
   );
 }

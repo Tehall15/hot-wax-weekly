@@ -18,7 +18,7 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-export default function FriendsPanel({ user, notifications, notifFeed, onClose, onNotificationsRead }) {
+export default function FriendsPanel({ user, notifications, notifFeed, onClose, onNotificationsRead, addLL, addToThisWeek }) {
   const [following, setFollowing] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -66,6 +66,10 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
     if (n.type === "follow") return <>{name} started following you</>;
     if (n.type === "reaction") return <>{name} reacted to your review</>;
     if (n.type === "comment") return <>{name} commented on your review</>;
+    if (n.type === "recommendation") {
+      const alb = n.metadata?.album;
+      return <>{name} recommended <span style={{ color: "#e0e0f0", fontWeight: 600 }}>{alb?.album}</span>{alb?.artist ? ` by ${alb.artist}` : ""}</>;
+    }
     return <span style={{ color: "#666" }}>{n.type}</span>;
   };
 
@@ -122,6 +126,22 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
                   }}>
                     <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5 }}>{notifText(n)}</div>
                     <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{timeAgo(n.created_at)}</div>
+                    {n.type === "recommendation" && n.metadata?.album && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                        <button onClick={() => { addToThisWeek(n.metadata.album); onClose(); }}
+                          style={{ background: "#F4C542", border: "none", borderRadius: 6,
+                            padding: "5px 10px", fontSize: 11, fontWeight: 700,
+                            color: "#0d0d1a", cursor: "pointer" }}>
+                          + This Week
+                        </button>
+                        <button onClick={() => addLL(n.metadata.album)}
+                          style={{ background: "transparent", border: "1px solid #2a2a4e",
+                            borderRadius: 6, padding: "5px 10px", fontSize: 11,
+                            color: "#aaa", cursor: "pointer" }}>
+                          + Listen Later
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

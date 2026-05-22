@@ -458,6 +458,13 @@ export default function App() {
           notifFeed={notifFeed}
           onClose={() => setPanelOpen(false)}
           onNotificationsRead={() => { markNotificationsRead(); }}
+          addLL={addLL}
+          addToThisWeek={(album) => {
+            const emptySlot = slots.find(s => !s.album);
+            if (emptySlot) updateSlot(emptySlot.id, "album", album);
+            setPanelOpen(false);
+            setTab("review");
+          }}
         />
       )}
     </div>
