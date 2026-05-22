@@ -212,11 +212,7 @@ function StatsSection({ reviews }) {
   if (reviews.length === 0) return null;
   const total = reviews.length;
   const avg = (reviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1);
-  const best = [...reviews].sort((a, b) => b.rating - a.rating)[0];
   const streak = computeStreak(reviews);
-  const dist = {};
-  for (let i = 1; i <= 10; i++) dist[i] = reviews.filter(r => r.rating === i).length;
-  const maxDist = Math.max(...Object.values(dist), 1);
 
   return (
     <div style={{ ...card, marginTop: 14 }}>
@@ -232,30 +228,6 @@ function StatsSection({ reviews }) {
           <div key={label} style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: "#F4C542" }}>{value}</div>
             <div style={{ fontSize: 10, color: "#555", marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-      {best && (
-        <div style={{ background: "#0f0f1a", borderRadius: 8, padding: "10px 12px", marginBottom: 16,
-          display: "flex", gap: 10, alignItems: "center" }}>
-          <AlbumArt src={best.image} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Highest Rated</div>
-            <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{best.album}</div>
-            <div style={{ fontSize: 11, color: "#888" }}>{best.artist}</div>
-          </div>
-          <div style={{ color: "#F4C542", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>{best.rating}/10</div>
-        </div>
-      )}
-      {/* Rating distribution */}
-      <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Rating Distribution</div>
-      <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 40 }}>
-        {[1,2,3,4,5,6,7,8,9,10].map(n => (
-          <div key={n} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <div style={{ width: "100%", background: "#F4C542",
-              height: `${Math.max(2, (dist[n] / maxDist) * 32)}px`,
-              borderRadius: 2, opacity: dist[n] ? 1 : 0.15 }} />
-            <div style={{ fontSize: 8, color: "#444" }}>{n}</div>
           </div>
         ))}
       </div>
