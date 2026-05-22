@@ -17,8 +17,11 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
       .select("following_id")
       .eq("follower_id", user.id)
       .then(({ data }) => setFollowing((data || []).map(r => r.following_id)));
-    supabase.rpc("get_all_profiles")
-      .then(({ data }) => {
+    supabase.from("app_data")
+      .select("id, display_name")
+      .not("display_name", "is", null)
+      .then(({ data, error }) => {
+        console.log("[friends] app_data rows:", data, "error:", error);
         setAllUsers((data || []).filter(u => u.id !== user?.id && u.display_name));
         setLoading(false);
       });
