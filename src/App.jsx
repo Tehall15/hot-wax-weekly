@@ -25,10 +25,11 @@ function RecordIcon({ count, onClick }) {
       <span style={{ position: "relative", lineHeight: 1 }}>
         <span style={{ fontSize: 20 }}>💿</span>
         {count > 0 && (
-          <span style={{ position: "absolute", top: -4, right: -6, background: "#F4C542",
-            color: "#0d0d1a", borderRadius: "50%", width: 16, height: 16, fontSize: 10,
-            fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {count > 9 ? "9+" : count}
+          <span style={{ position: "absolute", top: -5, right: -8, background: "#e53935",
+            color: "#fff", borderRadius: 4, minWidth: 16, height: 16, fontSize: 10,
+            fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 3px" }}>
+            {count > 99 ? "99+" : count}
           </span>
         )}
       </span>
