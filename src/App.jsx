@@ -344,7 +344,7 @@ export default function App() {
       {tab === "review"     && <ReviewTab slots={slots} weekKey={weekKey} shiftWeek={shiftWeek}
                                   resetWeek={resetWeek} updateSlot={updateSlot} rollRS={rollRS}
                                   sp={sp} completed={completed} submit={submit} />}
-      {tab === "hottest"    && <HottestWaxTab user={user} />}
+      {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
                                   editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}

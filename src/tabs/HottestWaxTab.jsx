@@ -28,29 +28,42 @@ function AlbumArt({ src, size = 52 }) {
 
 const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-export default function HottestWaxTab({ user }) {
+export default function HottestWaxTab({ user, reviews: ownReviews }) {
   const [following, setFollowing] = useState([]);
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const displayName = user?.user_metadata?.display_name || "You";
+
   useEffect(() => {
     if (!user) return;
+
+    // Seed feed with own reviews immediately
+    const ownItems = (ownReviews || []).map(r => ({
+      review: r, displayName, userId: user.id, isMe: true,
+    }));
+
     supabase.from("follows")
       .select("following_id")
       .eq("follower_id", user.id)
       .then(({ data }) => {
         const ids = (data || []).map(r => r.following_id);
         setFollowing(ids);
-        if (ids.length === 0) { setLoading(false); return; }
+        if (ids.length === 0) {
+          const sorted = [...ownItems].sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt));
+          setFeed(sorted.slice(0, 60));
+          setLoading(false);
+          return;
+        }
         supabase.from("app_data")
           .select("id, display_name, data")
           .in("id", ids)
           .then(({ data: rows }) => {
-            const items = [];
+            const items = [...ownItems];
             (rows || []).forEach(row => {
               const reviews = row.data?.reviews || [];
               reviews.forEach(r => {
-                items.push({ review: r, displayName: row.display_name, userId: row.id });
+                items.push({ review: r, displayName: row.display_name, userId: row.id, isMe: false });
               });
             });
             items.sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt));
@@ -66,17 +79,11 @@ export default function HottestWaxTab({ user }) {
     </div>
   );
 
-  if (following.length === 0) return (
-    <div style={{ ...card, textAlign: "center", padding: 40 }}>
-      <div style={{ fontSize: 32, marginBottom: 12 }}>👥</div>
-      <div style={{ color: "#555", fontSize: 13, marginBottom: 6 }}>No friends yet</div>
-      <div style={{ color: "#333", fontSize: 12 }}>Tap the 💿 to find and follow friends</div>
-    </div>
-  );
-
   if (feed.length === 0) return (
-    <div style={{ ...card, textAlign: "center", padding: 40, color: "#444", fontSize: 13 }}>
-      Your friends haven't reviewed anything yet
+    <div style={{ ...card, textAlign: "center", padding: 40 }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
+      <div style={{ color: "#555", fontSize: 13, marginBottom: 6 }}>No reviews yet</div>
+      <div style={{ color: "#333", fontSize: 12 }}>Start with This Week, then tap 💿 to find friends</div>
     </div>
   );
 
@@ -86,7 +93,7 @@ export default function HottestWaxTab({ user }) {
         Friends' Reviews
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-        {feed.map(({ review: r, displayName }, i) => (
+        {feed.map(({ review: r, displayName, isMe }, i) => (
           <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start",
             padding: "14px 0",
             borderBottom: i < feed.length - 1 ? "1px solid #1a1a2e" : "none" }}>
@@ -121,10 +128,14 @@ export default function HottestWaxTab({ user }) {
                   fontStyle: "italic", lineHeight: 1.4 }}>"{r.notes}"</div>
               )}
               <div style={{ marginTop: 6 }}>
-                <a href={`/u/${slugify(displayName)}`}
-                  style={{ fontSize: 11, color: "#444", textDecoration: "none" }}>
-                  {displayName}'s journal →
-                </a>
+                {isMe ? (
+                  <span style={{ fontSize: 11, color: "#444" }}>Your review</span>
+                ) : (
+                  <a href={`/u/${slugify(displayName)}`}
+                    style={{ fontSize: 11, color: "#444", textDecoration: "none" }}>
+                    {displayName}'s journal →
+                  </a>
+                )}
               </div>
             </div>
           </div>
