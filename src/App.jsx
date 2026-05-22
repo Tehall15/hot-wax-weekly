@@ -328,7 +328,7 @@ export default function App() {
   const tabs = [
     ["review",      "This Week"],
     ["hottest",     "Hottest Wax"],
-    ["collection",  "Collection"],
+    ["collection",  "Record Collection"],
     ["listen",      "Listen Later"],
   ];
 
