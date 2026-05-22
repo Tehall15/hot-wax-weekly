@@ -83,9 +83,6 @@ export default function HottestWaxTab({ user, reviews: ownReviews }) {
 
   return (
     <div style={card}>
-      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555", marginBottom: 16 }}>
-        Friends' Reviews
-      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {feed.map(({ review: r, displayName, isMe }, i) => (
           <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start",

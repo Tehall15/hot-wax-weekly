@@ -240,6 +240,28 @@ export default function App() {
     persist(reviews, updated);
   };
 
+  const addPastReview = (album, rating, topTracks, notes) => {
+    const entry = {
+      id: `past-${Date.now()}-${Math.random()}`,
+      weekKey, type: "past",
+      artist: album.artist, album: album.album, year: album.year || null,
+      image: album.image || null, spotifyId: album.spotifyId || null,
+      rating, topTracks: topTracks || [], notes: notes || "",
+      reviewedAt: new Date().toISOString(),
+      rs500Rank: null,
+    };
+    const updated = [...reviews, entry];
+    setReviews(updated);
+    persist(updated);
+  };
+
+  const pushToReview = (album, llIdx) => {
+    const emptySlot = slots.find(s => !s.album);
+    if (emptySlot) updateSlot(emptySlot.id, "album", album);
+    removeLL(llIdx);
+    setTab("review");
+  };
+
   const updateTop = (which, idx, albumObj) => {
     if (which === "all") {
       const updated = [...top4All];
@@ -366,13 +388,13 @@ export default function App() {
 
       {tab === "review"     && <ReviewTab slots={slots} weekKey={weekKey} shiftWeek={shiftWeek}
                                   resetWeek={resetWeek} updateSlot={updateSlot} rollRS={rollRS}
-                                  sp={sp} completed={completed} submit={submit} />}
+                                  sp={sp} completed={completed} submit={submit} onSavePast={addPastReview} />}
       {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
                                   editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} sp={sp} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
       {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
-                                  removeLL={removeLL} sp={sp} />}
+                                  removeLL={removeLL} sp={sp} onMoveToReview={pushToReview} />}
 
       {panelOpen && (
         <FriendsPanel
