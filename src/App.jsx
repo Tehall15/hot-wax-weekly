@@ -384,13 +384,13 @@ export default function App() {
             <button onClick={() => navigator.clipboard.writeText(profileUrl)} title={profileUrl}
               style={{ background: "none", border: "none", color: "#555", fontSize: 11,
                 cursor: "pointer", textDecoration: "underline" }}>
-              Share profile
+              🎤 Share profile
             </button>
           )}
           <button onClick={() => supabase.auth.signOut()}
             style={{ background: "none", border: "none", color: "#333", fontSize: 11,
               cursor: "pointer", textDecoration: "underline" }}>
-            Sign out
+            🤘 Sign out
           </button>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 8 }}>
