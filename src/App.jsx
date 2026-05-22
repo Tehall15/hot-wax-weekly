@@ -131,22 +131,16 @@ export default function App() {
   // Effect: Load notifications
   useEffect(() => {
     if (!user) return;
+    // Load all notifications for the feed, derive unread count for badge
     supabase.from("notifications")
       .select("*")
       .eq("user_id", user.id)
-      .eq("read", false)
       .order("created_at", { ascending: false })
+      .limit(50)
       .then(({ data }) => {
-        const unread = data || [];
-        setNotifications(unread);
-        // Seed the panel feed with these unread items
-        if (unread.length > 0) {
-          setNotifFeed(prev => {
-            const existingIds = new Set(prev.map(n => n.id));
-            const fresh = unread.filter(n => !existingIds.has(n.id));
-            return [...fresh, ...prev].slice(0, 50);
-          });
-        }
+        const all = data || [];
+        setNotifFeed(all);
+        setNotifications(all.filter(n => !n.read));
       });
 
     const channel = supabase.channel("notifications")
