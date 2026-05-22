@@ -27,6 +27,12 @@ export default function AuthScreen() {
         setError(error.message);
       } else if (data.session) {
         // Email confirmation disabled — signed in immediately
+        // Seed app_data row with display_name so they're discoverable right away
+        await supabase.from("app_data").upsert({
+          id: data.session.user.id,
+          display_name: name.trim(),
+          data: {},
+        });
       } else {
         setConfirmed(true);
       }

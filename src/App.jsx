@@ -73,6 +73,17 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Effect: Sync display_name into app_data on every login
+  useEffect(() => {
+    if (!user?.id) return;
+    const dn = user.user_metadata?.display_name;
+    if (!dn) return;
+    supabase.from("app_data")
+      .update({ display_name: dn })
+      .eq("id", user.id)
+      .then(({ error }) => { if (error) console.error("[name sync]", error); });
+  }, [user?.id]);
+
   // Effect B: Hydration
   useEffect(() => {
     if (!user) return;
