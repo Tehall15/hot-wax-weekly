@@ -137,8 +137,7 @@ export default function App() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50)
-      .then(({ data, error }) => {
-        console.log("[notif query] user.id:", user.id, "data:", data, "error:", error);
+      .then(({ data }) => {
         const all = data || [];
         setNotifFeed(all);
         setNotifications(all.filter(n => !n.read));
