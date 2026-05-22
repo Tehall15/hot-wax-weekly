@@ -34,7 +34,7 @@ function RecordIcon({ count, onClick }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("review");
+  const [tab, setTab] = useState("hottest");
   const [reviews, setReviews] = useState([]);
   const [listenLater, setListenLater] = useState([]);
   const [top4All, setTop4All] = useState([null, null, null, null]);
