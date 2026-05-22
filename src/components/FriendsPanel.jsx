@@ -17,9 +17,7 @@ export default function FriendsPanel({ user, notifications, onClose, onNotificat
       .select("following_id")
       .eq("follower_id", user.id)
       .then(({ data }) => setFollowing((data || []).map(r => r.following_id)));
-    supabase.from("app_data")
-      .select("id, display_name")
-      .not("display_name", "is", null)
+    supabase.rpc("get_all_profiles")
       .then(({ data }) => {
         setAllUsers((data || []).filter(u => u.id !== user?.id && u.display_name));
         setLoading(false);
