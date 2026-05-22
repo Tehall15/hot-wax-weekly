@@ -193,7 +193,7 @@ export default function App() {
     const updated = [...filtered, ...entries];
     setReviews(updated);
     persist(updated);
-    setTab("history");
+    setTab("collection");
   };
 
   const del = (id) => {
@@ -346,7 +346,7 @@ export default function App() {
                                   sp={sp} completed={completed} submit={submit} />}
       {tab === "hottest"    && <HottestWaxTab user={user} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
-                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} />}
+                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
       {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
                                   removeLL={removeLL} sp={sp} />}

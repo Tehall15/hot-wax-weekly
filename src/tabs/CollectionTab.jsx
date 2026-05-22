@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AlbumArt, Btn } from "../components/ui";
+import { AlbumArt, Pill } from "../components/ui";
+import { Btn } from "../components/ui";
 import { NOW_YEAR } from "../utils/time";
 
 const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
@@ -135,7 +136,47 @@ function YearWrap({ reviews }) {
   );
 }
 
-export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop }) {
+function ReviewList({ reviews, del }) {
+  if (reviews.length === 0) return null;
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2,
+        color: "#555", marginBottom: 4, paddingLeft: 2 }}>All Reviews</div>
+      {[...reviews].reverse().map(r => (
+        <div key={r.id} style={{ ...card, marginTop: 10, display: "flex", gap: 12 }}>
+          <AlbumArt src={r.image} size={52} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
+              <strong style={{ fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.album}</strong>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <span style={{ color: "#F4C542", fontWeight: 700, fontSize: 14 }}>{r.rating}/10</span>
+                {del && (
+                  <button onClick={() => del(r.id)}
+                    style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 16 }}>×</button>
+                )}
+              </div>
+            </div>
+            <div style={{ color: "#777", fontSize: 12, marginTop: 2 }}>
+              {r.artist} · {new Date(r.reviewedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+            </div>
+            <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
+              {r.year && <Pill>{r.year}</Pill>}
+              {r.rs500Rank && <Pill color="#2a2000">RS500 #{r.rs500Rank}</Pill>}
+            </div>
+            {r.topTracks?.length > 0 && (
+              <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {r.topTracks.map(t => <span key={t} style={{ fontSize: 11, color: "#F4C542" }}>★ {t}</span>)}
+              </div>
+            )}
+            {r.notes && <p style={{ color: "#666", fontSize: 12, marginTop: 6, marginBottom: 0, fontStyle: "italic" }}>"{r.notes}"</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, del }) {
   if (reviews.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#555", marginTop: 14 }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>🎵</div>
@@ -154,6 +195,7 @@ export default function CollectionTab({ reviews, top4All, top4Year, editTop4, se
         <CoversGrid reviews={reviews} />
       </div>
       <YearWrap reviews={reviews} />
+      <ReviewList reviews={reviews} del={del} />
     </div>
   );
 }
