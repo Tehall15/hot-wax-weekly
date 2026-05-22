@@ -29,57 +29,51 @@ function AlbumArt({ src, size = 52 }) {
 const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
 export default function HottestWaxTab({ user, reviews: ownReviews }) {
-  const [following, setFollowing] = useState([]);
-  const [feed, setFeed] = useState([]);
+  const [friendItems, setFriendItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const displayName = user?.user_metadata?.display_name || "You";
 
+  // Load friends' reviews once
   useEffect(() => {
     if (!user) return;
-
-    // Seed feed with own reviews immediately
-    const ownItems = (ownReviews || []).map(r => ({
-      review: r, displayName, userId: user.id, isMe: true,
-    }));
-
     supabase.from("follows")
       .select("following_id")
       .eq("follower_id", user.id)
       .then(({ data }) => {
         const ids = (data || []).map(r => r.following_id);
-        setFollowing(ids);
-        if (ids.length === 0) {
-          const sorted = [...ownItems].sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt));
-          setFeed(sorted.slice(0, 60));
-          setLoading(false);
-          return;
-        }
+        if (ids.length === 0) { setLoading(false); return; }
         supabase.from("app_data")
           .select("id, display_name, data")
           .in("id", ids)
           .then(({ data: rows }) => {
-            const items = [...ownItems];
+            const items = [];
             (rows || []).forEach(row => {
-              const reviews = row.data?.reviews || [];
-              reviews.forEach(r => {
+              (row.data?.reviews || []).forEach(r => {
                 items.push({ review: r, displayName: row.display_name, userId: row.id, isMe: false });
               });
             });
-            items.sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt));
-            setFeed(items.slice(0, 60));
+            setFriendItems(items);
             setLoading(false);
           });
       });
   }, [user]);
 
-  if (loading) return (
+  // Merge own reviews (live from props) with friends' reviews and sort
+  const ownItems = (ownReviews || []).map(r => ({
+    review: r, displayName, userId: user?.id, isMe: true,
+  }));
+  const feed = [...ownItems, ...friendItems]
+    .sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt))
+    .slice(0, 60);
+
+  if (loading && feed.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#444", fontSize: 13 }}>
       Loading…
     </div>
   );
 
-  if (feed.length === 0) return (
+  if (!loading && feed.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40 }}>
       <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
       <div style={{ color: "#555", fontSize: 13, marginBottom: 6 }}>No reviews yet</div>
