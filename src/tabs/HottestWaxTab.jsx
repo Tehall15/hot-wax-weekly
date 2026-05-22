@@ -191,19 +191,37 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
             padding: "14px 0",
             borderBottom: i < feed.length - 1 ? "1px solid #1a1a2e" : "none"
           }}>
+            {/* Reviewer header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%",
+                background: isMe ? "#1a1a2e" : "#1a1a3e", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12, color: isMe ? "#555" : "#F4C542", fontWeight: 700 }}>
+                {dn[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {isMe ? (
+                  <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>You</span>
+                ) : (
+                  <a href={`/u/${slugify(dn)}`}
+                    style={{ fontSize: 12, color: "#F4C542", fontWeight: 600, textDecoration: "none" }}>
+                    {dn}
+                  </a>
+                )}
+              </div>
+              <div style={{ fontSize: 10, color: "#333", flexShrink: 0 }}>
+                {new Date(r.reviewedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <AlbumArt src={r.image} size={52} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden",
-                      textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.album}</div>
-                    <div style={{ color: "#888", fontSize: 12 }}>{r.artist}
-                      {r.year ? <span style={{ color: "#444" }}> · {r.year}</span> : null}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 10, color: "#333", flexShrink: 0, marginLeft: 10 }}>
-                    {new Date(r.reviewedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden",
+                    textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.album}</div>
+                  <div style={{ color: "#888", fontSize: 12 }}>{r.artist}
+                    {r.year ? <span style={{ color: "#444" }}> · {r.year}</span> : null}
                   </div>
                 </div>
                 <div style={{ marginTop: 4 }}>
@@ -303,16 +321,6 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL }) {
                   </div>
                 )}
 
-                <div style={{ marginTop: 8 }}>
-                  {isMe ? (
-                    <span style={{ fontSize: 11, color: "#333" }}>Your review</span>
-                  ) : (
-                    <a href={`/u/${slugify(dn)}`}
-                      style={{ fontSize: 11, color: "#333", textDecoration: "none" }}>
-                      {dn}'s journal →
-                    </a>
-                  )}
-                </div>
               </div>
             </div>
           </div>
