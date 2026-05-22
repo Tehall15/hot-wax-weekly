@@ -378,19 +378,21 @@ export default function App() {
                 cursor: "pointer", marginLeft: 6 }}>✎</button>
           </p>
         )}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginTop: 10 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, marginTop: 10 }}>
           <RecordIcon count={notifications.length} onClick={() => setPanelOpen(true)} />
           {profileUrl && (
             <button onClick={() => navigator.clipboard.writeText(profileUrl)} title={profileUrl}
-              style={{ background: "none", border: "none", color: "#555", fontSize: 11,
-                cursor: "pointer" }}>
-              🎤 Share profile
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>🎤</span>
+              <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>Share profile</span>
             </button>
           )}
           <button onClick={() => supabase.auth.signOut()}
-            style={{ background: "none", border: "none", color: "#444", fontSize: 11,
-              cursor: "pointer" }}>
-            🤘 Sign out
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>🤘</span>
+            <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>Sign out</span>
           </button>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 8 }}>
