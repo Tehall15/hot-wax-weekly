@@ -36,7 +36,7 @@ function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, update
 
   return (
     <>
-      {["all", "year"].map(which => {
+      {["all"].map(which => {
         const data = which === "all" ? top4All : top4Year;
         const title = which === "all" ? "Top 4 All Time" : `Top 4 ${NOW_YEAR}`;
         const isEditing = editTop4 === which;
