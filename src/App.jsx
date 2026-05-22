@@ -262,6 +262,20 @@ export default function App() {
     setTab("review");
   };
 
+  const swapTop = (which, fromIdx, toIdx) => {
+    if (which === "all") {
+      const updated = [...top4All];
+      [updated[fromIdx], updated[toIdx]] = [updated[toIdx], updated[fromIdx]];
+      setTop4All(updated);
+      persist(reviews, listenLater, updated, top4Year);
+    } else {
+      const updated = [...top4Year];
+      [updated[fromIdx], updated[toIdx]] = [updated[toIdx], updated[fromIdx]];
+      setTop4Year(updated);
+      persist(reviews, listenLater, top4All, updated);
+    }
+  };
+
   const updateTop = (which, idx, albumObj) => {
     if (which === "all") {
       const updated = [...top4All];
@@ -391,7 +405,7 @@ export default function App() {
                                   sp={sp} completed={completed} submit={submit} onSavePast={addPastReview} />}
       {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
-                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} sp={sp} />}
+                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} swapTop={swapTop} del={del} sp={sp} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
       {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
                                   removeLL={removeLL} sp={sp} onMoveToReview={pushToReview} />}

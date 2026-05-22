@@ -14,9 +14,11 @@ function resolveSlot(item, reviews) {
   return r ? { artist: r.artist, album: r.album, image: r.image, spotifyId: r.spotifyId } : null;
 }
 
-function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, sp }) {
+function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, sp }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState([]);
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
   const search = async (val) => {
     setQ(val);
@@ -56,10 +58,26 @@ function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, update
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
               {data.map((item, i) => {
                 const alb = resolveSlot(item, reviews);
+                const isDragging = draggedIdx === i;
+                const isDragOver = dragOverIdx === i && draggedIdx !== i;
                 return (
-                  <div key={i} style={{ position: "relative", paddingTop: "100%", borderRadius: 6,
-                    overflow: "hidden", background: "#0f0f22",
-                    border: isEditing ? "2px dashed #3a3a5e" : "1px solid #1e1e3e" }}>
+                  <div key={i}
+                    draggable={!!alb}
+                    onDragStart={() => { setDraggedIdx(i); }}
+                    onDragOver={e => { e.preventDefault(); setDragOverIdx(i); }}
+                    onDragLeave={() => setDragOverIdx(null)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (draggedIdx !== null && draggedIdx !== i) swapTop(which, draggedIdx, i);
+                      setDraggedIdx(null); setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
+                    style={{ position: "relative", paddingTop: "100%", borderRadius: 6,
+                      overflow: "hidden", background: "#0f0f22",
+                      border: isDragOver ? "2px solid #F4C542" : isEditing ? "2px dashed #3a3a5e" : "1px solid #1e1e3e",
+                      opacity: isDragging ? 0.4 : 1,
+                      cursor: alb ? "grab" : "default",
+                      transition: "opacity 0.15s, border 0.15s" }}>
                     <div style={{ position: "absolute", inset: 0 }}>
                       {alb ? (
                         <>
@@ -245,7 +263,7 @@ function ReviewList({ reviews, del }) {
   );
 }
 
-export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, del, sp }) {
+export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, del, sp }) {
   if (reviews.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#555", marginTop: 14 }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>🎵</div>
@@ -256,7 +274,7 @@ export default function CollectionTab({ reviews, top4All, top4Year, editTop4, se
   return (
     <div>
       <Top4Section reviews={reviews} top4All={top4All} top4Year={top4Year}
-        editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} sp={sp} />
+        editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} swapTop={swapTop} sp={sp} />
       <div style={{ ...card, marginTop: 10 }}>
         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555", marginBottom: 12 }}>
           Collection ({reviews.length})
