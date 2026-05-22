@@ -85,6 +85,13 @@ export default function App() {
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) { console.error("[hydration error]", error); return; }
+        // Sync display_name into app_data if it's missing or stale
+        const dn = user.user_metadata?.display_name || null;
+        if (dn && data?.display_name !== dn) {
+          supabase.from("app_data")
+            .upsert({ id: user.id, display_name: dn, data: data?.data || {} })
+            .then(() => {});
+        }
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
         setReviews(d.reviews);
@@ -137,8 +144,9 @@ export default function App() {
 
   const persist = (r = reviews, ll = listenLater, t4a = top4All, t4y = top4Year) => {
     if (!user) return;
+    const dn = user.user_metadata?.display_name || null;
     supabase.from("app_data")
-      .upsert({ id: user.id, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y } })
+      .upsert({ id: user.id, display_name: dn, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y } })
       .then(res => { if (res.error) console.error("[persist error]", res.error); })
       .catch(console.error);
   };
