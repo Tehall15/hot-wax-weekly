@@ -121,8 +121,14 @@ export default function PublicProfile({ slug }) {
     .sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt))
     .slice(0, 20);
 
-  const top4Reviews = profile.top4All
-    .map(id => profile.reviews.find(r => r.id === id))
+  // top4All can be album objects (new) or review ID strings (old)
+  const top4Albums = profile.top4All
+    .map(item => {
+      if (!item) return null;
+      if (typeof item === "object") return item;
+      const r = profile.reviews.find(x => x.id === item);
+      return r ? { artist: r.artist, album: r.album, image: r.image } : null;
+    })
     .filter(Boolean);
 
   const covers = [...profile.reviews]
@@ -154,13 +160,13 @@ export default function PublicProfile({ slug }) {
       </div>
 
       {/* Top 4 */}
-      {top4Reviews.length > 0 && (
+      {top4Albums.length > 0 && (
         <div style={S.card}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2,
             color: "#555", marginBottom: 14 }}>All-time top 4</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-            {top4Reviews.map((r, i) => (
-              <div key={r.id} style={{ textAlign: "center" }}>
+            {top4Albums.map((r, i) => (
+              <div key={i} style={{ textAlign: "center" }}>
                 <div style={{ position: "relative", display: "inline-block" }}>
                   <AlbumArt src={r.image} size={72} />
                   <div style={{ position: "absolute", top: -6, left: -6, width: 20, height: 20,

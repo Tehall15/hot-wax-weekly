@@ -89,8 +89,14 @@ export default function App() {
         const d = data.data;
         setReviews(d.reviews);
         if (d.listenLater?.length) setListenLater(d.listenLater);
-        if (d.top4All) setTop4All(d.top4All);
-        if (d.top4Year) setTop4Year(d.top4Year);
+        // Migrate top4: old format stores review ID strings, new format stores album objects
+        const migrateTop4 = (arr) => (arr || [null,null,null,null]).map(item => {
+          if (!item || typeof item === "object") return item;
+          const r = d.reviews.find(x => x.id === item);
+          return r ? { artist: r.artist, album: r.album, image: r.image || null, spotifyId: r.spotifyId || null } : null;
+        });
+        if (d.top4All) setTop4All(migrateTop4(d.top4All));
+        if (d.top4Year) setTop4Year(migrateTop4(d.top4Year));
         setSlots(buildSlotsFromReviews(d.reviews, getWeekKey()));
       })
       .catch(err => { if (!cancelled) console.error("[hydration failed]", err); });
@@ -215,20 +221,18 @@ export default function App() {
     persist(reviews, updated);
   };
 
-  const updateTop = (which, idx, reviewId) => {
-    if (!reviews.find(r => r.id === reviewId)) return;
+  const updateTop = (which, idx, albumObj) => {
     if (which === "all") {
       const updated = [...top4All];
-      updated[idx] = reviewId;
+      updated[idx] = albumObj; // album object { artist, album, image, spotifyId } or null to clear
       setTop4All(updated);
       persist(reviews, listenLater, updated, top4Year);
     } else {
       const updated = [...top4Year];
-      updated[idx] = reviewId;
+      updated[idx] = albumObj;
       setTop4Year(updated);
       persist(reviews, listenLater, top4All, updated);
     }
-    setEditTop4(null);
   };
 
   if (!user) return <AuthScreen />;
@@ -346,7 +350,7 @@ export default function App() {
                                   sp={sp} completed={completed} submit={submit} />}
       {tab === "hottest"    && <HottestWaxTab user={user} reviews={reviews} />}
       {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
-                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} />}
+                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} del={del} sp={sp} />}
       {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
       {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
                                   removeLL={removeLL} sp={sp} />}

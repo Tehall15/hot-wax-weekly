@@ -1,73 +1,142 @@
 import { useState } from "react";
 import { AlbumArt, Pill } from "../components/ui";
 import { Btn } from "../components/ui";
+import { LOCAL_DB } from "../utils/data";
 import { NOW_YEAR } from "../utils/time";
 
 const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop }) {
+// Handles both new format (album object) and old format (review ID string)
+function resolveSlot(item, reviews) {
+  if (!item) return null;
+  if (typeof item === "object") return item;
+  const r = reviews.find(x => x.id === item);
+  return r ? { artist: r.artist, album: r.album, image: r.image, spotifyId: r.spotifyId } : null;
+}
+
+function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, sp }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
+
+  const search = async (val) => {
+    setQ(val);
+    if (val.length < 2) { setResults([]); return; }
+    let found = [];
+    if (sp?.searchAlbums) found = (await sp.searchAlbums(val)) || [];
+    if (!found.length) {
+      const low = val.toLowerCase();
+      found = LOCAL_DB.filter(a =>
+        a.artist.toLowerCase().includes(low) || a.album.toLowerCase().includes(low)
+      ).slice(0, 6);
+    }
+    setResults(found);
+  };
+
+  const clearSearch = () => { setQ(""); setResults([]); };
+
   return (
     <>
       {["all", "year"].map(which => {
         const data = which === "all" ? top4All : top4Year;
         const title = which === "all" ? "Top 4 All Time" : `Top 4 ${NOW_YEAR}`;
+        const isEditing = editTop4 === which;
+
         return (
           <div key={which} style={{ ...card, background: "#1a1a2e", marginTop: which === "year" ? 10 : 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555" }}>{title}</span>
-              <Btn onClick={() => setEditTop4(editTop4 === which ? null : which)}
-                variant="ghost" style={{ padding: "5px 12px", fontSize: 11 }}>
-                {editTop4 === which ? "Done" : "Edit"}
+              <Btn
+                onClick={() => { setEditTop4(isEditing ? null : which); clearSearch(); }}
+                variant="ghost" style={{ padding: "3px 10px", fontSize: 11 }}>
+                {isEditing ? "Done" : "Edit"}
               </Btn>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {data.map((rid, i) => {
-                const r = rid ? reviews.find(x => x.id === rid) : null;
+
+            {/* 4 small covers in a row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {data.map((item, i) => {
+                const alb = resolveSlot(item, reviews);
                 return (
-                  <div key={i} style={{ position: "relative", paddingTop: "100%", borderRadius: 8,
+                  <div key={i} style={{ position: "relative", paddingTop: "100%", borderRadius: 6,
                     overflow: "hidden", background: "#0f0f22",
-                    border: editTop4 === which ? "2px dashed #F4C542" : "none" }}>
+                    border: isEditing ? "2px dashed #3a3a5e" : "1px solid #1e1e3e" }}>
                     <div style={{ position: "absolute", inset: 0 }}>
-                      {r ? (
+                      {alb ? (
                         <>
-                          {r.image
-                            ? <img src={r.image} alt={r.album} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          {alb.image
+                            ? <img src={alb.image} alt={alb.album} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center",
-                                justifyContent: "center", fontSize: 48 }}>💿</div>
+                                justifyContent: "center", fontSize: 22 }}>💿</div>
                           }
+                          {/* number badge */}
+                          <div style={{ position: "absolute", top: 4, left: 4, width: 16, height: 16,
+                            background: "#F4C542", borderRadius: "50%", display: "flex",
+                            alignItems: "center", justifyContent: "center",
+                            fontSize: 9, fontWeight: 700, color: "#0d0d1a" }}>{i + 1}</div>
+                          {/* clear button in edit mode */}
+                          {isEditing && (
+                            <button onClick={() => updateTop(which, i, null)}
+                              style={{ position: "absolute", top: 3, right: 3, background: "rgba(0,0,0,.75)",
+                                border: "none", color: "#fff", borderRadius: "50%", width: 18, height: 18,
+                                cursor: "pointer", fontSize: 13, lineHeight: 1,
+                                display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>×</button>
+                          )}
+                          {/* album name overlay */}
                           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-                            background: "linear-gradient(transparent,rgba(0,0,0,.95))",
-                            padding: "30px 8px 8px", fontSize: 11, color: "#fff", lineHeight: 1.3 }}>
-                            <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.album}</div>
-                            <div style={{ color: "#aaa", fontSize: 10 }}>{r.artist}</div>
-                            <div style={{ color: "#F4C542", marginTop: 3, fontSize: 12 }}>{r.rating}/10</div>
+                            background: "linear-gradient(transparent,rgba(0,0,0,.92))",
+                            padding: "14px 5px 5px", fontSize: 9, color: "#fff", lineHeight: 1.2 }}>
+                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{alb.album}</div>
                           </div>
                         </>
                       ) : (
                         <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center",
-                          justifyContent: "center", fontSize: 32, color: "#333" }}>+</div>
+                          justifyContent: "center", fontSize: 20, color: "#2a2a4e" }}>
+                          {isEditing ? "+" : ""}
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-            {editTop4 === which && reviews.length > 0 && (
-              <div style={{ marginTop: 12, maxHeight: 200, overflowY: "auto" }}>
-                {reviews.map(r => (
-                  <div key={r.id} onClick={() => {
-                    const next = data.findIndex(x => !x);
-                    if (next !== -1) updateTop(which, next, r.id);
-                  }} style={{ padding: "6px 8px", background: "#0a0a18", borderRadius: 6,
-                    marginBottom: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                    <AlbumArt src={r.image} size={32} />
-                    <div style={{ flex: 1, fontSize: 12 }}>
-                      <div style={{ fontWeight: 600 }}>{r.album}</div>
-                      <div style={{ color: "#777", fontSize: 11 }}>{r.artist}</div>
-                    </div>
-                    <span style={{ color: "#F4C542", fontSize: 12 }}>{r.rating}/10</span>
+
+            {/* Spotify search in edit mode */}
+            {isEditing && (
+              <div style={{ marginTop: 12 }}>
+                <input
+                  value={q}
+                  onChange={e => search(e.target.value)}
+                  placeholder={sp?.token ? "Search any album on Spotify…" : "Search album…"}
+                  style={{ width: "100%", background: "#0f0f22", border: "1px solid #2a2a4e", borderRadius: 8,
+                    padding: "9px 12px", color: "#e0e0f0", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                />
+                {results.length > 0 && (
+                  <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto" }}>
+                    {results.map((r, idx) => (
+                      <div key={idx}
+                        onClick={() => {
+                          const next = data.findIndex(x => !resolveSlot(x, reviews));
+                          const slot = next !== -1 ? next : 0;
+                          updateTop(which, slot, { artist: r.artist, album: r.album, image: r.image || null, spotifyId: r.spotifyId || null });
+                          clearSearch();
+                        }}
+                        style={{ padding: "7px 8px", background: "#0a0a18", borderRadius: 6,
+                          marginBottom: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#141428"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#0a0a18"}>
+                        {r.image
+                          ? <img src={r.image} alt="" style={{ width: 38, height: 38, borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
+                          : <div style={{ width: 38, height: 38, borderRadius: 4, background: "#1a1a2e", flexShrink: 0,
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>💿</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.album}</div>
+                          <div style={{ color: "#777", fontSize: 11 }}>{r.artist}{r.year ? ` · ${r.year}` : ""}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -176,7 +245,7 @@ function ReviewList({ reviews, del }) {
   );
 }
 
-export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, del }) {
+export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, del, sp }) {
   if (reviews.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#555", marginTop: 14 }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>🎵</div>
@@ -187,7 +256,7 @@ export default function CollectionTab({ reviews, top4All, top4Year, editTop4, se
   return (
     <div>
       <Top4Section reviews={reviews} top4All={top4All} top4Year={top4Year}
-        editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} />
+        editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} sp={sp} />
       <div style={{ ...card, marginTop: 10 }}>
         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "#555", marginBottom: 12 }}>
           Collection ({reviews.length})
