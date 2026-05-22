@@ -5,14 +5,13 @@ import { EMPTY, buildSlotsFromReviews } from "./utils/slots";
 import { RS500 } from "./utils/data";
 import { NOW_YEAR, getWeekKey } from "./utils/time";
 import AuthScreen from "./components/AuthScreen";
+import FriendsPanel from "./components/FriendsPanel";
 import { Btn } from "./components/ui";
 import ReviewTab from "./tabs/ReviewTab";
 import HistoryTab from "./tabs/HistoryTab";
-import CoversTab from "./tabs/CoversTab";
-import Top4Tab from "./tabs/Top4Tab";
+import CollectionTab from "./tabs/CollectionTab";
+import HottestWaxTab from "./tabs/HottestWaxTab";
 import ListenLaterTab from "./tabs/ListenLaterTab";
-import WrapTab from "./tabs/WrapTab";
-import FriendsTab from "./tabs/FriendsTab";
 
 function slugify(name) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
@@ -21,7 +20,7 @@ function slugify(name) {
 function RecordIcon({ count, onClick }) {
   return (
     <button onClick={onClick} style={{ position: "relative", background: "none", border: "none",
-      cursor: "pointer", padding: 0, lineHeight: 1 }} title="Notifications">
+      cursor: "pointer", padding: 0, lineHeight: 1 }} title="Friends & Notifications">
       <span style={{ fontSize: 20 }}>💿</span>
       {count > 0 && (
         <span style={{ position: "absolute", top: -4, right: -6, background: "#F4C542",
@@ -48,6 +47,7 @@ export default function App() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [notifications, setNotifications] = useState([]);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
@@ -108,7 +108,6 @@ export default function App() {
       .order("created_at", { ascending: false })
       .then(({ data }) => setNotifications(data || []));
 
-    // Realtime subscription
     const channel = supabase.channel("notifications")
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "notifications",
@@ -268,13 +267,10 @@ export default function App() {
   const completed = slots.filter(s => s.album && s.rating > 0).length;
 
   const tabs = [
-    ["review",  "This Week"],
-    ["history", `Collection (${reviews.length})`],
-    ["covers",  "Covers"],
-    ["top4",    "Top 4"],
-    ["listen",  "Listen Later"],
-    ["friends", "Friends"],
-    ["wrap",    "Year Wrap"],
+    ["review",      "This Week"],
+    ["hottest",     "Hottest Wax"],
+    ["collection",  "Collection"],
+    ["listen",      "Listen Later"],
   ];
 
   return (
@@ -310,10 +306,7 @@ export default function App() {
           </p>
         )}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 4 }}>
-          <RecordIcon count={notifications.length} onClick={() => {
-            setTab("friends");
-            markNotificationsRead();
-          }} />
+          <RecordIcon count={notifications.length} onClick={() => setPanelOpen(true)} />
           {profileUrl && (
             <button onClick={() => navigator.clipboard.writeText(profileUrl)} title={profileUrl}
               style={{ background: "none", border: "none", color: "#555", fontSize: 11,
@@ -348,17 +341,24 @@ export default function App() {
         </div>
       </div>
 
-      {tab === "review"   && <ReviewTab slots={slots} weekKey={weekKey} shiftWeek={shiftWeek}
-                                resetWeek={resetWeek} updateSlot={updateSlot} rollRS={rollRS}
-                                sp={sp} completed={completed} submit={submit} />}
-      {tab === "history"  && <HistoryTab reviews={reviews} del={del} />}
-      {tab === "covers"   && <CoversTab reviews={reviews} />}
-      {tab === "top4"     && <Top4Tab reviews={reviews} top4All={top4All} top4Year={top4Year}
-                                editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} />}
-      {tab === "listen"   && <ListenLaterTab listenLater={listenLater} addLL={addLL}
-                                removeLL={removeLL} sp={sp} />}
-      {tab === "friends"  && <FriendsTab user={user} />}
-      {tab === "wrap"     && <WrapTab reviews={reviews} wrapYear={wrapYear} setWrapYear={setWrapYear} />}
+      {tab === "review"     && <ReviewTab slots={slots} weekKey={weekKey} shiftWeek={shiftWeek}
+                                  resetWeek={resetWeek} updateSlot={updateSlot} rollRS={rollRS}
+                                  sp={sp} completed={completed} submit={submit} />}
+      {tab === "hottest"    && <HottestWaxTab user={user} />}
+      {tab === "collection" && <CollectionTab reviews={reviews} top4All={top4All} top4Year={top4Year}
+                                  editTop4={editTop4} setEditTop4={setEditTop4} updateTop={updateTop} />}
+      {tab === "history"    && <HistoryTab reviews={reviews} del={del} />}
+      {tab === "listen"     && <ListenLaterTab listenLater={listenLater} addLL={addLL}
+                                  removeLL={removeLL} sp={sp} />}
+
+      {panelOpen && (
+        <FriendsPanel
+          user={user}
+          notifications={notifications}
+          onClose={() => setPanelOpen(false)}
+          onNotificationsRead={() => { markNotificationsRead(); }}
+        />
+      )}
     </div>
   );
 }
