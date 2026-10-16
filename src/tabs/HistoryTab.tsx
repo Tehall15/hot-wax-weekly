@@ -1,8 +1,10 @@
+import type { CSSProperties } from "react";
 import { AlbumArt, Pill } from "../components/ui";
+import type { Review } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-export default function HistoryTab({ reviews, del }) {
+export default function HistoryTab({ reviews, del }: { reviews: Review[]; del: (id: string) => void }) {
   if (reviews.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#555" }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>📀</div>No reviews yet.
@@ -30,7 +32,7 @@ export default function HistoryTab({ reviews, del }) {
               <Pill>{r.year}</Pill>
               {r.rs500Rank && <Pill color="#2a2000">RS500 #{r.rs500Rank}</Pill>}
             </div>
-            {r.topTracks?.length > 0 && (
+            {(r.topTracks?.length ?? 0) > 0 && (
               <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {r.topTracks.map(t => <span key={t} style={{ fontSize: 11, color: "#F4C542" }}>★ {t}</span>)}
               </div>

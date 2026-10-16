@@ -1,29 +1,45 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { AlbumArt, Pill } from "../components/ui";
 import { Btn } from "../components/ui";
 import { LOCAL_DB } from "../utils/data";
 import { NOW_YEAR } from "../utils/time";
+import type { SpotifyApi } from "../hooks/useSpotify";
+import type { Album, Review, Top4 } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+type Which = "all" | "year";
+
+interface Top4Props {
+  top4All: Top4;
+  top4Year: Top4;
+  editTop4: Which | null;
+  setEditTop4: (which: Which | null) => void;
+  updateTop: (which: Which, idx: number, album: Album | null) => void;
+  swapTop: (which: Which, fromIdx: number, toIdx: number) => void;
+}
+
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
 // Handles both new format (album object) and old format (review ID string)
-function resolveSlot(item, reviews) {
+function resolveSlot(item: Album | string | null | undefined, reviews: Review[]): Album | null {
   if (!item) return null;
   if (typeof item === "object") return item;
   const r = reviews.find(x => x.id === item);
   return r ? { artist: r.artist, album: r.album, image: r.image, spotifyId: r.spotifyId } : null;
 }
 
-function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, sp }) {
+function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, sp }: Top4Props & {
+  reviews: Review[];
+  sp?: SpotifyApi;
+}) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState([]);
-  const [draggedIdx, setDraggedIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [results, setResults] = useState<Album[]>([]);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
-  const search = async (val) => {
+  const search = async (val: string) => {
     setQ(val);
     if (val.length < 2) { setResults([]); return; }
-    let found = [];
+    let found: Album[] = [];
     if (sp?.searchAlbums) found = (await sp.searchAlbums(val)) || [];
     if (!found.length) {
       const low = val.toLowerCase();
@@ -38,7 +54,7 @@ function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, update
 
   return (
     <>
-      {["all"].map(which => {
+      {(["all"] as Which[]).map(which => {
         const data = which === "all" ? top4All : top4Year;
         const title = which === "all" ? "Top 4 All Time" : `Top 4 ${NOW_YEAR}`;
         const isEditing = editTop4 === which;
@@ -164,7 +180,7 @@ function Top4Section({ reviews, top4All, top4Year, editTop4, setEditTop4, update
   );
 }
 
-function CoversGrid({ reviews }) {
+function CoversGrid({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) return null;
   return (
     <div style={{ marginTop: 10, display: "grid",
@@ -191,7 +207,7 @@ function CoversGrid({ reviews }) {
   );
 }
 
-function computeStreak(reviews) {
+function computeStreak(reviews: Review[]) {
   const weekKeys = new Set(reviews.filter(r => r.weekKey).map(r => r.weekKey));
   let streak = 0;
   const today = new Date();
@@ -208,7 +224,7 @@ function computeStreak(reviews) {
   return streak;
 }
 
-function StatsSection({ reviews }) {
+function StatsSection({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) return null;
   const total = reviews.length;
   const avg = (reviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1);
@@ -235,7 +251,7 @@ function StatsSection({ reviews }) {
   );
 }
 
-function YearWrap({ reviews }) {
+function YearWrap({ reviews }: { reviews: Review[] }) {
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const years = [...new Set(reviews.map(r => new Date(r.reviewedAt).getFullYear()))].sort((a, b) => b - a);
   const yr = reviews.filter(r => new Date(r.reviewedAt).getFullYear() === wrapYear);
@@ -247,7 +263,7 @@ function YearWrap({ reviews }) {
     const m = new Date(r.reviewedAt).getMonth();
     acc[m] = (acc[m] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<number, number>);
   const busyMonth = Object.keys(monthCounts).length
     ? months[Number(Object.entries(monthCounts).sort((a,b) => b[1]-a[1])[0][0])]
     : null;
@@ -302,7 +318,7 @@ function YearWrap({ reviews }) {
   );
 }
 
-function ReviewList({ reviews, del }) {
+function ReviewList({ reviews, del }: { reviews: Review[]; del?: (id: string) => void }) {
   if (reviews.length === 0) return null;
   return (
     <div style={{ marginTop: 14 }}>
@@ -329,7 +345,7 @@ function ReviewList({ reviews, del }) {
               {r.year && <Pill>{r.year}</Pill>}
               {r.rs500Rank && <Pill color="#2a2000">RS500 #{r.rs500Rank}</Pill>}
             </div>
-            {r.topTracks?.length > 0 && (
+            {(r.topTracks?.length ?? 0) > 0 && (
               <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {r.topTracks.map(t => <span key={t} style={{ fontSize: 11, color: "#F4C542" }}>★ {t}</span>)}
               </div>
@@ -342,7 +358,11 @@ function ReviewList({ reviews, del }) {
   );
 }
 
-export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, del, sp }) {
+export default function CollectionTab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop, swapTop, del, sp }: Top4Props & {
+  reviews: Review[];
+  del?: (id: string) => void;
+  sp?: SpotifyApi;
+}) {
   if (reviews.length === 0) return (
     <div style={{ ...card, textAlign: "center", padding: 40, color: "#555", marginTop: 14 }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>🎵</div>

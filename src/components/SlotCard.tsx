@@ -2,9 +2,21 @@ import { useState, useEffect } from "react";
 import { AlbumArt, Btn, Pill, StarRating } from "./ui";
 import AlbumSearch from "./AlbumSearch";
 import TrackPicker from "./TrackPicker";
+import type { Album, SearchFn, Slot, SlotField, Track, TracklistFn } from "../types";
 
-export default function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist, searchFn }) {
-  const [tracks, setTracks] = useState([]);
+interface Props {
+  slot: Slot;
+  label: string;
+  badge: string;
+  color: string;
+  updateSlot: (field: SlotField, value: Album | number | string | string[] | null) => void;
+  rollRS?: () => void;
+  getTracklist?: TracklistFn;
+  searchFn?: SearchFn;
+}
+
+export default function SlotCard({ slot, label, badge, color, updateSlot, rollRS, getTracklist, searchFn }: Props) {
+  const [tracks, setTracks] = useState<Track[]>([]);
 
   useEffect(() => {
     if (!slot.album?.spotifyId || !getTracklist) return;

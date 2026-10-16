@@ -1,8 +1,14 @@
+import type { CSSProperties } from "react";
 import { NOW_YEAR } from "../utils/time";
+import type { Review } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-export default function WrapTab({ reviews, wrapYear, setWrapYear }) {
+export default function WrapTab({ reviews, wrapYear, setWrapYear }: {
+  reviews: Review[];
+  wrapYear: number;
+  setWrapYear: (year: number) => void;
+}) {
   const years = [...new Set(reviews.map(r => new Date(r.reviewedAt).getFullYear()))].sort((a, b) => b - a);
   const yearReviews = reviews.filter(r => new Date(r.reviewedAt).getFullYear() === wrapYear);
 

@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
-export function StarRating({ value, onChange, readonly = false }) {
-  const [hover, setHover] = useState(null);
+export function StarRating({ value, onChange, readonly = false }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
+  const [hover, setHover] = useState<number | null>(null);
   return (
     <div style={{ display: "flex", gap: 1, alignItems: "center" }}>
       {[...Array(10)].map((_, i) => {
         const v = i + 1, filled = (hover ?? value) >= v;
         return (
-          <button key={v} onClick={() => !readonly && onChange(v)}
+          <button key={v} onClick={() => !readonly && onChange?.(v)}
             onMouseEnter={() => !readonly && setHover(v)}
             onMouseLeave={() => !readonly && setHover(null)}
             style={{ background: "none", border: "none", cursor: readonly ? "default" : "pointer",
@@ -22,20 +22,26 @@ export function StarRating({ value, onChange, readonly = false }) {
   );
 }
 
-export function AlbumArt({ src, size = 56 }) {
+export function AlbumArt({ src, size = 56 }: { src?: string | null; size?: number }) {
   return src
     ? <img src={src} alt="" style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
     : <div style={{ width: size, height: size, borderRadius: 6, background: "#1a1a2e", display: "flex",
         alignItems: "center", justifyContent: "center", fontSize: size * 0.4, flexShrink: 0 }}>💿</div>;
 }
 
-export function Pill({ children, color = "#1e1e3a" }) {
+export function Pill({ children, color = "#1e1e3a" }: { children?: ReactNode; color?: string }) {
   return <span style={{ display: "inline-block", background: color, borderRadius: 20, padding: "2px 9px",
     fontSize: 11, color: "#888", border: "1px solid #2a2a4a" }}>{children}</span>;
 }
 
-export function Btn({ children, onClick, variant = "default", style = {}, disabled = false }) {
-  const variants = {
+export function Btn({ children, onClick, variant = "default", style = {}, disabled = false }: {
+  children?: ReactNode;
+  onClick?: () => void;
+  variant?: "primary" | "ghost" | "spotify" | "default";
+  style?: CSSProperties;
+  disabled?: boolean;
+}) {
+  const variants: Record<string, CSSProperties> = {
     primary: { background: "#F4C542", color: "#0d0d1a" },
     ghost:   { background: "transparent", color: "#aaa", border: "1px solid #333" },
     spotify: { background: "#1DB954", color: "#000" },

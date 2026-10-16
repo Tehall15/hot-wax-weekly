@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Btn } from "./ui";
+import type { Track } from "../types";
 
-export default function TrackPicker({ tracks, selectedTracks, onChange }) {
+export default function TrackPicker({ tracks, selectedTracks, onChange }: {
+  tracks: Track[];
+  selectedTracks: string[];
+  onChange: (tracks: string[]) => void;
+}) {
   const [input, setInput] = useState("");
 
-  const toggle = (name) => {
+  const toggle = (name: string) => {
     if (selectedTracks.includes(name)) onChange(selectedTracks.filter(t => t !== name));
     else if (selectedTracks.length < 5) onChange([...selectedTracks, name]);
   };

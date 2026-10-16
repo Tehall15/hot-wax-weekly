@@ -1,12 +1,23 @@
 import { AlbumArt, Btn } from "../components/ui";
+import type { CSSProperties } from "react";
 import { NOW_YEAR } from "../utils/time";
+import type { Review } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+type Which = "all" | "year";
 
-export default function Top4Tab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop }) {
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+
+export default function Top4Tab({ reviews, top4All, top4Year, editTop4, setEditTop4, updateTop }: {
+  reviews: Review[];
+  top4All: (string | null)[];
+  top4Year: (string | null)[];
+  editTop4: Which | null;
+  setEditTop4: (which: Which | null) => void;
+  updateTop: (which: Which, idx: number, reviewId: string | null) => void;
+}) {
   return (
     <div>
-      {["all", "year"].map(which => {
+      {(["all", "year"] as const).map(which => {
         const data = which === "all" ? top4All : top4Year;
         const title = which === "all" ? "Top 4 All Time" : `Top 4 ${NOW_YEAR}`;
         return (

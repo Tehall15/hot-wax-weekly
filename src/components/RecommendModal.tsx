@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import AvatarDisplay from "./AvatarDisplay";
+import type { User } from "@supabase/supabase-js";
+import type { Album, AppDataRow } from "../types";
 
-export default function RecommendModal({ album, user, onClose }) {
-  const [following, setFollowing] = useState([]);
+export default function RecommendModal({ album, user, onClose }: { album: Album; user: User | null; onClose: () => void }) {
+  const [following, setFollowing] = useState<Pick<AppDataRow, "id" | "display_name" | "data">[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sent, setSent] = useState(new Set());
+  const [sent, setSent] = useState(new Set<string>());
 
   useEffect(() => {
     if (!user) return;
@@ -25,8 +27,8 @@ export default function RecommendModal({ album, user, onClose }) {
       });
   }, [user]);
 
-  const send = async (target) => {
-    if (sent.has(target.id)) return;
+  const send = async (target: Pick<AppDataRow, "id">) => {
+    if (!user || sent.has(target.id)) return;
     const dn = user.user_metadata?.display_name || "Someone";
     await supabase.from("notifications").insert({
       user_id: target.id,

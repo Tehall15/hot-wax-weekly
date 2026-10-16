@@ -1,11 +1,20 @@
 import { useState, useEffect } from "react";
+import type { CSSProperties } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import type { ProfileRow, Review } from "../types";
 
-function slugify(name) {
+interface FeedItem {
+  review: Review;
+  displayName: string | null;
+  userId: string;
+}
+
+function slugify(name?: string | null) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
 }
 
-function StarDisplay({ value }) {
+function StarDisplay({ value }: { value: number }) {
   return (
     <span>
       {[1,2,3,4,5].map(i => (
@@ -15,7 +24,7 @@ function StarDisplay({ value }) {
   );
 }
 
-function AlbumArt({ src, size = 48 }) {
+function AlbumArt({ src, size = 48 }: { src?: string | null; size?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: 6, overflow: "hidden",
       background: "#1a1a2e", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -26,10 +35,10 @@ function AlbumArt({ src, size = 48 }) {
   );
 }
 
-export default function FriendsTab({ user }) {
-  const [following, setFollowing] = useState([]);   // list of following_id strings
-  const [feed, setFeed] = useState([]);             // { review, displayName, userId }
-  const [allUsers, setAllUsers] = useState([]);     // { id, display_name }
+export default function FriendsTab({ user }: { user: User | null }) {
+  const [following, setFollowing] = useState<string[]>([]);   // list of following_id strings
+  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [allUsers, setAllUsers] = useState<Pick<ProfileRow, "id" | "display_name">[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -60,19 +69,20 @@ export default function FriendsTab({ user }) {
       .select("id, display_name, data")
       .in("id", following)
       .then(({ data: rows }) => {
-        const items = [];
+        const items: FeedItem[] = [];
         (rows || []).forEach(row => {
-          const reviews = row.data?.reviews || [];
+          const reviews: Review[] = row.data?.reviews || [];
           reviews.forEach(r => {
             items.push({ review: r, displayName: row.display_name, userId: row.id });
           });
         });
-        items.sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt));
+        items.sort((a, b) => new Date(b.review.reviewedAt).getTime() - new Date(a.review.reviewedAt).getTime());
         setFeed(items.slice(0, 40));
       });
   }, [following]);
 
-  const follow = async (targetId) => {
+  const follow = async (targetId: string) => {
+    if (!user) return;
     await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
     // Create notification for the followed user
     const myName = user.user_metadata?.display_name || "Someone";
@@ -85,7 +95,8 @@ export default function FriendsTab({ user }) {
     setFollowing(prev => [...prev, targetId]);
   };
 
-  const unfollow = async (targetId) => {
+  const unfollow = async (targetId: string) => {
+    if (!user) return;
     await supabase.from("follows")
       .delete()
       .eq("follower_id", user.id)
@@ -93,10 +104,10 @@ export default function FriendsTab({ user }) {
     setFollowing(prev => prev.filter(id => id !== targetId));
   };
 
-  const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+  const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
   const filteredUsers = allUsers.filter(u =>
-    u.display_name.toLowerCase().includes(search.toLowerCase())
+    u.display_name?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -130,7 +141,7 @@ export default function FriendsTab({ user }) {
                     <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a1a3e",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 14, color: "#F4C542" }}>
-                      {u.display_name[0].toUpperCase()}
+                      {u.display_name?.[0]?.toUpperCase()}
                     </div>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{u.display_name}</div>
@@ -189,7 +200,7 @@ export default function FriendsTab({ user }) {
                   <div style={{ marginTop: 4 }}>
                     <StarDisplay value={r.rating} />
                   </div>
-                  {r.topTracks?.length > 0 && (
+                  {(r.topTracks?.length ?? 0) > 0 && (
                     <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 4 }}>
                       {r.topTracks.map(t => (
                         <span key={t} style={{ fontSize: 10, color: "#F4C542",

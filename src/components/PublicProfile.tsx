@@ -1,11 +1,20 @@
 import { useState, useEffect } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import type { Album, Review, Top4Item } from "../types";
 
-function slugify(name) {
+interface Profile {
+  displayName: string | null;
+  reviews: Review[];
+  top4All: (Top4Item | string)[];
+  top4Year: (Top4Item | string)[];
+}
+
+function slugify(name?: string | null) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
 }
 
-function StarDisplay({ value }) {
+function StarDisplay({ value }: { value: number }) {
   return (
     <span>
       {[1,2,3,4,5].map(i => (
@@ -15,7 +24,7 @@ function StarDisplay({ value }) {
   );
 }
 
-function AlbumArt({ src, size = 48 }) {
+function AlbumArt({ src, size = 48 }: { src?: string | null; size?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: 6, overflow: "hidden",
       background: "#1a1a2e", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -26,13 +35,13 @@ function AlbumArt({ src, size = 48 }) {
   );
 }
 
-export default function PublicProfile({ slug }) {
-  const [profile, setProfile] = useState(null);
+export default function PublicProfile({ slug }: { slug: string }) {
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [profileUserId, setProfileUserId] = useState(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -51,7 +60,7 @@ export default function PublicProfile({ slug }) {
   }, [currentUser, profileUserId]);
 
   const follow = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !profileUserId) return;
     await supabase.from("follows").insert({ follower_id: currentUser.id, following_id: profileUserId });
     const myName = currentUser.user_metadata?.display_name || "Someone";
     await supabase.from("notifications").insert({
@@ -62,7 +71,7 @@ export default function PublicProfile({ slug }) {
   };
 
   const unfollow = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !profileUserId) return;
     await supabase.from("follows").delete()
       .eq("follower_id", currentUser.id).eq("following_id", profileUserId);
     setIsFollowing(false);
@@ -86,7 +95,7 @@ export default function PublicProfile({ slug }) {
         });
         setLoading(false);
       })
-      .catch(() => { setNotFound(true); setLoading(false); });
+      .then(undefined, () => { setNotFound(true); setLoading(false); });
   }, [slug]);
 
   const S = {
@@ -113,27 +122,29 @@ export default function PublicProfile({ slug }) {
     </div>
   );
 
+  if (!profile) return null;
+
   const journalLabel = profile.displayName
     ? `${profile.displayName}${profile.displayName.endsWith("s") ? "'" : "'s"} album journal`
     : "album journal";
 
   const recentReviews = [...profile.reviews]
-    .sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt))
+    .sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime())
     .slice(0, 20);
 
   // top4All can be album objects (new) or review ID strings (old)
   const top4Albums = profile.top4All
-    .map(item => {
+    .map((item): Album | null => {
       if (!item) return null;
       if (typeof item === "object") return item;
       const r = profile.reviews.find(x => x.id === item);
       return r ? { artist: r.artist, album: r.album, image: r.image } : null;
     })
-    .filter(Boolean);
+    .filter((a): a is Album => a !== null);
 
   const covers = [...profile.reviews]
     .filter(r => r.image)
-    .sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt))
+    .sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime())
     .slice(0, 24);
 
   return (
@@ -193,7 +204,7 @@ export default function PublicProfile({ slug }) {
             {covers.map(r => (
               <div key={r.id} title={`${r.artist} — ${r.album}`}
                 style={{ aspectRatio: "1", borderRadius: 4, overflow: "hidden", background: "#1a1a2e" }}>
-                <img src={r.image} alt={r.album}
+                <img src={r.image ?? undefined} alt={r.album}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
             ))}
