@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
+import type { KeyboardEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import useSpotify from "./hooks/useSpotify";
 import { EMPTY, buildSlotsFromReviews } from "./utils/slots";
 import { RS500 } from "./utils/data";
 import { NOW_YEAR, getWeekKey } from "./utils/time";
-import AuthScreen from "./components/AuthScreen";
-import FriendsPanel from "./components/FriendsPanel";
-import AvatarDisplay from "./components/AvatarDisplay";
-import AvatarPicker from "./components/AvatarPicker";
-import { Btn } from "./components/ui";
+import AuthScreen from "./pages/AuthScreen";
+import FriendsPanel from "./components/social/FriendsPanel";
+import AvatarPicker from "./components/avatar/AvatarPicker";
 import ReviewTab from "./tabs/ReviewTab";
 import HistoryTab from "./tabs/HistoryTab";
 import CollectionTab from "./tabs/CollectionTab";
@@ -25,75 +24,13 @@ import type {
   Top4,
   Top4Item,
 } from "./types";
+import { slugify } from "./utils/format";
+import Header from "./components/layout/Header";
+import styles from "./App.module.css";
 
 type TabId = "review" | "hottest" | "collection" | "listen" | "history";
 type Which = "all" | "year";
 type SlotValue = Album | number | string | string[] | null;
-
-function slugify(name: string | undefined) {
-  return (
-    name
-      ?.toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "") || ""
-  );
-}
-
-function RecordIcon({
-  count,
-  onClick,
-}: {
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        position: "relative",
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        padding: 0,
-        lineHeight: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 2,
-      }}
-      title="Friends & Notifications"
-    >
-      <span style={{ position: "relative", lineHeight: 1 }}>
-        <span style={{ fontSize: 20 }}>💿</span>
-        {count > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -5,
-              right: -8,
-              background: "#e53935",
-              color: "#fff",
-              borderRadius: 4,
-              minWidth: 16,
-              height: 16,
-              fontSize: 10,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 3px",
-            }}
-          >
-            {count > 99 ? "99+" : count}
-          </span>
-        )}
-      </span>
-      <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>
-        Find bandmates
-      </span>
-    </button>
-  );
-}
 
 export default function App() {
   const [tab, setTab] = useState<TabId>("hottest");
@@ -506,257 +443,49 @@ export default function App() {
     setEditingName(false);
   };
 
-  const S = {
-    app: {
-      background: "#0d0d1a",
-      minHeight: "100vh",
-      color: "#e0e0f0",
-      fontFamily: "Georgia,serif",
-      maxWidth: 720,
-      margin: "0 auto",
-      padding: "0 14px 90px",
-    },
-    tabBar: {
-      display: "flex",
-      gap: 3,
-      marginTop: 20,
-      background: "#0a0a18",
-      borderRadius: 12,
-      padding: 3,
-    },
-    tab: (a: boolean) => ({
-      flex: 1,
-      padding: "8px 0",
-      background: a ? "#1a1a30" : "transparent",
-      border: a ? "1px solid #2a2a4a" : "1px solid transparent",
-      borderRadius: 8,
-      color: a ? "#e0e0f0" : "#555",
-      fontSize: 12,
-      cursor: "pointer",
-    }),
+  const handleNameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") saveName();
+    if (event.key === "Escape") setEditingName(false);
+  };
+
+  const editName = () => {
+    setNameInput(user.user_metadata?.display_name ?? "");
+    setEditingName(true);
   };
 
   const completed = slots.filter((s) => s.album && s.rating > 0).length;
 
-  const tabs: [TabId, string][] = [
-    ["review", "This Week"],
-    ["hottest", "Hottest Wax"],
-    ["collection", "Record Collection"],
-    ["listen", "Listen Later"],
-  ];
-
   return (
-    <div style={S.app}>
-      <div style={{ paddingTop: 28, textAlign: "center" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>
-          🔥 Hot Wax Weekly
-        </h1>
-        {editingName ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 6,
-            }}
-          >
-            <input
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveName();
-                if (e.key === "Escape") setEditingName(false);
-              }}
-              autoFocus
-              placeholder="Your name"
-              style={{
-                background: "#1a1a2e",
-                border: "1px solid #2a2a4e",
-                borderRadius: 6,
-                padding: "4px 10px",
-                color: "#e0e0f0",
-                fontSize: 13,
-                outline: "none",
-                width: 160,
-              }}
-            />
-            <button
-              onClick={saveName}
-              style={{
-                background: "#F4C542",
-                border: "none",
-                borderRadius: 6,
-                padding: "4px 10px",
-                color: "#0d0d1a",
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: "pointer",
-              }}
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setEditingName(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#555",
-                fontSize: 18,
-                cursor: "pointer",
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 6,
-            }}
-          >
-            <AvatarDisplay
-              avatar={avatar}
-              name={displayName}
-              size={32}
-              onClick={() => setAvatarPickerOpen(true)}
-              muted
-            />
-            <p
-              style={{
-                color: "#444",
-                fontSize: 12,
-                margin: 0,
-                fontStyle: "italic",
-              }}
-            >
-              {journalLabel}
-              <button
-                onClick={() => {
-                  setNameInput(user.user_metadata?.display_name ?? "");
-                  setEditingName(true);
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#333",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  marginLeft: 6,
-                }}
-              >
-                ✎
-              </button>
-            </p>
-          </div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 24,
-            marginTop: 10,
-          }}
-        >
-          <RecordIcon
-            count={notifications.length}
-            onClick={() => setPanelOpen(true)}
-          />
-          {profileUrl && (
-            <button
-              onClick={() => navigator.clipboard.writeText(profileUrl)}
-              title={profileUrl}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              <span style={{ fontSize: 20, lineHeight: 1 }}>🎤</span>
-              <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>
-                Share profile
-              </span>
-            </button>
-          )}
-          <button
-            onClick={() => supabase.auth.signOut()}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <span style={{ fontSize: 20, lineHeight: 1 }}>🤘</span>
-            <span style={{ fontSize: 9, color: "#555", letterSpacing: 0.5 }}>
-              Sign out
-            </span>
-          </button>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 10,
-            marginTop: 8,
-          }}
-        >
-          {sp.token && !sp.expired ? (
-            <span style={{ fontSize: 11, color: "#1DB954" }}>
-              ● Spotify connected
-            </span>
-          ) : sp.expired ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, color: "#ff6b6b" }}>
-                ● Spotify disconnected
-              </span>
-              <Btn
-                onClick={() => {
-                  sp.disconnect();
-                  sp.login();
-                }}
-                variant="spotify"
-                style={{ padding: "4px 12px", fontSize: 11 }}
-              >
-                Reconnect
-              </Btn>
-            </div>
-          ) : (
-            <Btn
-              onClick={sp.login}
-              variant="spotify"
-              style={{ padding: "5px 14px", fontSize: 11 }}
-            >
-              Connect Spotify
-            </Btn>
-          )}
-        </div>
-        <div style={S.tabBar}>
-          {tabs.map(([id, lbl]) => (
-            <button
-              key={id}
-              style={S.tab(tab === id)}
-              onClick={() => setTab(id)}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className={styles.app}>
+      <Header
+        displayName={displayName}
+        journalLabel={journalLabel}
+        editingName={editingName}
+        nameInput={nameInput}
+        onNameInputChange={setNameInput}
+        onNameKeyDown={handleNameKeyDown}
+        onSaveName={saveName}
+        onCancelNameEdit={() => setEditingName(false)}
+        onEditName={editName}
+        avatar={avatar}
+        onAvatarClick={() => setAvatarPickerOpen(true)}
+        notificationCount={notifications.length}
+        onOpenFriends={() => setPanelOpen(true)}
+        profileUrl={profileUrl}
+        onShareProfile={() => {
+          if (profileUrl) navigator.clipboard.writeText(profileUrl);
+        }}
+        onSignOut={() => supabase.auth.signOut()}
+        spotifyConnected={!!sp.token && !sp.expired}
+        spotifyExpired={sp.expired}
+        onSpotifyReconnect={() => {
+          sp.disconnect();
+          sp.login();
+        }}
+        onSpotifyLogin={sp.login}
+        selectedTab={tab === "history" ? null : tab}
+        onTabChange={setTab}
+      />
 
       {tab === "review" && (
         <ReviewTab

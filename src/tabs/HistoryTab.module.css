@@ -1,0 +1,81 @@
+.empty.empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-dim);
+}
+
+.emptyIcon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.reviewCard.reviewCard {
+  display: flex;
+  gap: 12px;
+}
+
+.reviewDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.albumName {
+  font-size: 14px;
+}
+
+.ratingActions {
+  display: flex;
+  gap: 8px;
+}
+
+.rating {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+}
+
+.metadata {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.pills {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.topTracks {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.topTrack {
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.notes {
+  color: #666;
+  font-size: 12px;
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-style: italic;
+}

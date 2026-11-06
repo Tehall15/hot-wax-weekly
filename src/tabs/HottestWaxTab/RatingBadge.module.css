@@ -1,0 +1,20 @@
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star,
+.value {
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.value {
+  font-weight: 700;
+}
+
+.outOf {
+  color: #444;
+  font-size: 12px;
+}

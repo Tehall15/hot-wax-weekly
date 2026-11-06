@@ -1,0 +1,91 @@
+.card.card {
+  border-left: 3px solid #7c5cbf;
+}
+
+.sectionLabel,
+.fieldLabel,
+.notesLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.sectionLabel {
+  margin-bottom: 12px;
+}
+
+.selectedAlbum {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.selectedAlbumDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.selectedAlbumName {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectedAlbumArtist {
+  color: #888;
+  font-size: 12px;
+}
+
+.clearButton {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.ratingSection,
+.trackSection {
+  margin-bottom: 14px;
+}
+
+.fieldLabel {
+  margin-bottom: 8px;
+}
+
+.notesSection {
+  margin-bottom: 14px;
+}
+
+.notesLabel {
+  margin-bottom: 6px;
+}
+
+.notesInput {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 13px;
+  resize: none;
+  height: 68px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.saveButton {
+  width: 100%;
+}
+
+.saveButton :global(button) {
+  width: 100%;
+}

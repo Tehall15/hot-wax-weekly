@@ -1,0 +1,100 @@
+.s1 {
+  margin-top: 14px;
+}
+
+.s2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.s3 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.s4 {
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.s5 {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.s6 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.s7 {
+  background: #0f0f1a;
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.s8 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.s9 {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.s10 {
+  background: #0f0f1a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.s11 {
+  flex: 1;
+  min-width: 0;
+}
+
+.s12 {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.s13 {
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s14 {
+  font-size: 11px;
+  color: #888;
+}
+
+.s15 {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}

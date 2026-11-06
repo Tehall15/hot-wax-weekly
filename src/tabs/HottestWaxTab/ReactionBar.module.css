@@ -1,0 +1,52 @@
+.bar {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.reaction {
+  background: #0f0f1a;
+  border: 1px solid #2a2a3e;
+  border-radius: 20px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s;
+}
+
+.reactionMine {
+  background: #2a2000;
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.count {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.actionOpen {
+  color: #aaa;
+}

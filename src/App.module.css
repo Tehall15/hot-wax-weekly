@@ -1,0 +1,9 @@
+.app {
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  font-family: Georgia, serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 14px 90px;
+}

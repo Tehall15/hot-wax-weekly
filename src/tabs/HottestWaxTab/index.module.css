@@ -1,0 +1,30 @@
+.feedList {
+  display: flex;
+  flex-direction: column;
+}
+
+.emptyCard.emptyCard {
+  padding: 40px;
+  text-align: center;
+}
+
+.loading {
+  color: #444;
+  font-size: 13px;
+}
+
+.emptyIcon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.emptyHint {
+  color: #333;
+  font-size: 12px;
+}
