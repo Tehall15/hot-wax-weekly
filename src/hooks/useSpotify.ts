@@ -28,7 +28,8 @@ const toAlbum = (a: SpotifyAlbumItem): Album => ({
   image: a.images?.[1]?.url || a.images?.[0]?.url || null,
 });
 
-const REDIRECT = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || window.location.origin;
+const REDIRECT =
+  import.meta.env.VITE_SPOTIFY_REDIRECT_URI || window.location.origin;
 
 export default function useSpotify(
   clientId: string | undefined,
@@ -193,50 +194,53 @@ export default function useSpotify(
     window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
   };
 
-  const api = useCallback(async <T>(
-    path: string,
-    currentToken: string | null = token,
-  ): Promise<T | null> => {
-    if (!currentToken) return null;
-    try {
-      const r = await fetch(`https://api.spotify.com/v1/${path}`, {
-        headers: { Authorization: `Bearer ${currentToken}` },
-      });
-      if (r.status === 401) {
-        const newToken = await refreshAccessToken();
-        if (!newToken) {
-          setExpired(true);
+  const api = useCallback(
+    async <T>(
+      path: string,
+      currentToken: string | null = token,
+    ): Promise<T | null> => {
+      if (!currentToken) return null;
+      try {
+        const r = await fetch(`https://api.spotify.com/v1/${path}`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+        if (r.status === 401) {
+          const newToken = await refreshAccessToken();
+          if (!newToken) {
+            setExpired(true);
+            return null;
+          }
+          const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
+            headers: { Authorization: `Bearer ${newToken}` },
+          });
+          if (!r2.ok) return null;
+          return (await r2.json()) as T;
+        }
+        if (r.status === 429) {
+          // Retry up to 3 times with Retry-After backoff
+          let last = r;
+          for (let i = 0; i < 3; i++) {
+            const wait = parseInt(last.headers.get("Retry-After") || "3", 10);
+            await new Promise((res) => setTimeout(res, wait * 1000));
+            const retry = await fetch(`https://api.spotify.com/v1/${path}`, {
+              headers: { Authorization: `Bearer ${currentToken}` },
+            });
+            if (retry.status !== 429) {
+              if (!retry.ok) return null;
+              return (await retry.json()) as T;
+            }
+            last = retry;
+          }
           return null;
         }
-        const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
-          headers: { Authorization: `Bearer ${newToken}` },
-        });
-        if (!r2.ok) return null;
-        return (await r2.json()) as T;
-      }
-      if (r.status === 429) {
-        // Retry up to 3 times with Retry-After backoff
-        let last = r;
-        for (let i = 0; i < 3; i++) {
-          const wait = parseInt(last.headers.get("Retry-After") || "3", 10);
-          await new Promise((res) => setTimeout(res, wait * 1000));
-          const retry = await fetch(`https://api.spotify.com/v1/${path}`, {
-            headers: { Authorization: `Bearer ${currentToken}` },
-          });
-          if (retry.status !== 429) {
-            if (!retry.ok) return null;
-            return (await retry.json()) as T;
-          }
-          last = retry;
-        }
+        if (!r.ok) return null;
+        return (await r.json()) as T;
+      } catch {
         return null;
       }
-      if (!r.ok) return null;
-      return (await r.json()) as T;
-    } catch {
-      return null;
-    }
-  }, [token, refreshAccessToken]);
+    },
+    [token, refreshAccessToken],
+  );
 
   const searchAlbums = useCallback(
     async (q: string): Promise<Album[]> => {

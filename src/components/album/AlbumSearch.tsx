@@ -68,10 +68,16 @@ export default function AlbumSearch({
               className="flex cursor-pointer items-center gap-2.5 border-b border-muted px-3.5 py-2.5 last:border-b-0 hover:bg-accent"
             >
               {r.image && (
-                <img src={r.image} alt="" className="size-9 rounded-sm object-cover" />
+                <img
+                  src={r.image}
+                  alt=""
+                  className="size-9 rounded-sm object-cover"
+                />
               )}
               <div>
-                <div className="text-sm font-semibold text-foreground">{r.album}</div>
+                <div className="text-sm font-semibold text-foreground">
+                  {r.album}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {r.artist} · {r.year}
                 </div>
