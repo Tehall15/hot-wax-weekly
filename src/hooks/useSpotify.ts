@@ -30,15 +30,23 @@ const toAlbum = (a: SpotifyAlbumItem): Album => ({
 
 const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
 
-export default function useSpotify(clientId: string | undefined, user: User | null) {
+export default function useSpotify(
+  clientId: string | undefined,
+  user: User | null,
+) {
   const [token, setToken] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const refreshTokenRef = useRef<string | null>(null);
   // Persistent cache: survives page refreshes — keyed by spotifyId
   const persistentCache = useRef<Record<string, Track[]> | null>(null);
   if (persistentCache.current === null) {
-    try { persistentCache.current = JSON.parse(localStorage.getItem("hww_tracks") || "{}"); }
-    catch { persistentCache.current = {}; }
+    try {
+      persistentCache.current = JSON.parse(
+        localStorage.getItem("hww_tracks") || "{}",
+      );
+    } catch {
+      persistentCache.current = {};
+    }
   }
   // In-flight cache: deduplicates concurrent requests within a session
   const inflightCache = useRef(new Map<string, Promise<Track[]>>());
@@ -64,7 +72,7 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
         code_verifier: codeVerifier,
       }),
     })
-      .then(r => r.json())
+      .then((r) => r.json())
       .then((data: { access_token?: string; refresh_token?: string }) => {
         if (!data.access_token) return;
         setToken(data.access_token);
@@ -75,40 +83,47 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
         // Use update (not upsert) — never touches the data column
         supabase.auth.getUser().then(({ data: { user } }) => {
           if (!user) return;
-          supabase.from("app_data")
+          supabase
+            .from("app_data")
             .update({
               spotify_token: data.access_token,
               spotify_connected: true,
               spotify_refresh_token: data.refresh_token ?? null,
             })
             .eq("id", user.id)
-            .then(
-              res => { if (res.error) console.error("[spotify connect error]", res.error); },
-              console.error,
-            );
+            .then((res) => {
+              if (res.error)
+                console.error("[spotify connect error]", res.error);
+            }, console.error);
         });
       })
-      .catch(err => console.error("[spotify token exchange failed]", err));
+      .catch((err) => console.error("[spotify token exchange failed]", err));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Effect D: Spotify token restore — isolated, depends only on user
   useEffect(() => {
     if (!user) return;
-    supabase.from("app_data")
+    supabase
+      .from("app_data")
       .select("spotify_token, spotify_refresh_token")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (error) { console.error("[spotify restore error]", error); return; }
+        if (error) {
+          console.error("[spotify restore error]", error);
+          return;
+        }
         // Restore refresh token: Supabase is source of truth, localStorage as fallback
-        const rt = data?.spotify_refresh_token || localStorage.getItem("spotify_refresh_token");
+        const rt =
+          data?.spotify_refresh_token ||
+          localStorage.getItem("spotify_refresh_token");
         if (rt) {
           refreshTokenRef.current = rt;
           localStorage.setItem("spotify_refresh_token", rt);
         }
         if (data?.spotify_token) setToken(data.spotify_token);
       })
-      .then(undefined, err => console.error("[spotify restore failed]", err));
+      .then(undefined, (err) => console.error("[spotify restore failed]", err));
   }, [user]);
 
   const refreshAccessToken = async (): Promise<string | null> => {
@@ -124,7 +139,10 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
           client_id: clientId ?? "",
         }),
       });
-      const data = await res.json() as { access_token?: string; refresh_token?: string };
+      const data = (await res.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+      };
       if (data.access_token) {
         setToken(data.access_token);
         const newRt = data.refresh_token || refreshTokenRef.current;
@@ -134,10 +152,17 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
         }
         // Persist refreshed tokens back to Supabase
         if (user) {
-          supabase.from("app_data")
-            .update({ spotify_token: data.access_token, spotify_refresh_token: newRt ?? null })
+          supabase
+            .from("app_data")
+            .update({
+              spotify_token: data.access_token,
+              spotify_refresh_token: newRt ?? null,
+            })
             .eq("id", user.id)
-            .then(r => { if (r.error) console.error("[spotify refresh persist error]", r.error); });
+            .then((r) => {
+              if (r.error)
+                console.error("[spotify refresh persist error]", r.error);
+            });
         }
         return data.access_token;
       }
@@ -165,7 +190,10 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
     window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
   };
 
-  const api = async <T,>(path: string, currentToken: string | null = token): Promise<T | null> => {
+  const api = async <T>(
+    path: string,
+    currentToken: string | null = token,
+  ): Promise<T | null> => {
     if (!currentToken) return null;
     try {
       const r = await fetch(`https://api.spotify.com/v1/${path}`, {
@@ -173,70 +201,89 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
       });
       if (r.status === 401) {
         const newToken = await refreshAccessToken();
-        if (!newToken) { setExpired(true); return null; }
+        if (!newToken) {
+          setExpired(true);
+          return null;
+        }
         const r2 = await fetch(`https://api.spotify.com/v1/${path}`, {
           headers: { Authorization: `Bearer ${newToken}` },
         });
         if (!r2.ok) return null;
-        return await r2.json() as T;
+        return (await r2.json()) as T;
       }
       if (r.status === 429) {
         // Retry up to 3 times with Retry-After backoff
         let last = r;
         for (let i = 0; i < 3; i++) {
           const wait = parseInt(last.headers.get("Retry-After") || "3", 10);
-          await new Promise(res => setTimeout(res, wait * 1000));
+          await new Promise((res) => setTimeout(res, wait * 1000));
           const retry = await fetch(`https://api.spotify.com/v1/${path}`, {
             headers: { Authorization: `Bearer ${currentToken}` },
           });
           if (retry.status !== 429) {
             if (!retry.ok) return null;
-            return await retry.json() as T;
+            return (await retry.json()) as T;
           }
           last = retry;
         }
         return null;
       }
       if (!r.ok) return null;
-      return await r.json() as T;
-    } catch { return null; }
+      return (await r.json()) as T;
+    } catch {
+      return null;
+    }
   };
 
-  const searchAlbums = useCallback(async (q: string): Promise<Album[]> => {
-    if (!token || !q) return [];
-    const data = await api<SpotifyAlbumsResponse>(`search?q=${encodeURIComponent(q)}&type=album&limit=8`);
-    if (!data?.albums?.items) return [];
-    return data.albums.items.map(toAlbum);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  const searchAlbums = useCallback(
+    async (q: string): Promise<Album[]> => {
+      if (!token || !q) return [];
+      const data = await api<SpotifyAlbumsResponse>(
+        `search?q=${encodeURIComponent(q)}&type=album&limit=8`,
+      );
+      if (!data?.albums?.items) return [];
+      return data.albums.items.map(toAlbum);
+    },
+    [token],
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getTracklist = useCallback((spotifyId: string): Promise<Track[]> => {
-    if (!token || !spotifyId) return Promise.resolve([]);
-    // 1. Persistent cache hit — no API call at all
-    const cache = persistentCache.current ?? {};
-    if (cache[spotifyId]) return Promise.resolve(cache[spotifyId]);
-    // 2. In-flight dedup — reuse existing request for same album
-    if (!inflightCache.current.has(spotifyId)) {
-      const p = api<SpotifyTracksResponse>(`albums/${spotifyId}/tracks?limit=50`)
-        .then(data => {
-          const tracks = data?.items?.map((t, i): Track => ({ num: i + 1, name: t.name })) || [];
+  const getTracklist = useCallback(
+    (spotifyId: string): Promise<Track[]> => {
+      if (!token || !spotifyId) return Promise.resolve([]);
+      // 1. Persistent cache hit — no API call at all
+      const cache = persistentCache.current ?? {};
+      if (cache[spotifyId]) return Promise.resolve(cache[spotifyId]);
+      // 2. In-flight dedup — reuse existing request for same album
+      if (!inflightCache.current.has(spotifyId)) {
+        const p = api<SpotifyTracksResponse>(
+          `albums/${spotifyId}/tracks?limit=50`,
+        ).then((data) => {
+          const tracks =
+            data?.items?.map((t, i): Track => ({ num: i + 1, name: t.name })) ||
+            [];
           if (tracks.length > 0) {
             cache[spotifyId] = tracks;
             persistentCache.current = cache;
-            try { localStorage.setItem("hww_tracks", JSON.stringify(cache)); }
-            catch {} // storage full — non-fatal
+            try {
+              localStorage.setItem("hww_tracks", JSON.stringify(cache));
+            } catch {} // storage full — non-fatal
           } else {
             inflightCache.current.delete(spotifyId); // don't cache failures so retry is possible
           }
           return tracks;
         });
-      inflightCache.current.set(spotifyId, p);
-    }
-    return inflightCache.current.get(spotifyId) ?? Promise.resolve([]);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+        inflightCache.current.set(spotifyId, p);
+      }
+      return inflightCache.current.get(spotifyId) ?? Promise.resolve([]);
+    },
+    [token],
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNewReleases = useCallback(async (): Promise<Album[]> => {
     if (!token) return [];
-    const data = await api<SpotifyAlbumsResponse>("browse/new-releases?limit=20&country=GB");
+    const data = await api<SpotifyAlbumsResponse>(
+      "browse/new-releases?limit=20&country=GB",
+    );
     if (!data?.albums?.items) return [];
     return data.albums.items.map(toAlbum);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -247,14 +294,29 @@ export default function useSpotify(clientId: string | undefined, user: User | nu
     refreshTokenRef.current = null;
     localStorage.removeItem("spotify_refresh_token");
     if (user) {
-      supabase.from("app_data")
-        .update({ spotify_token: null, spotify_refresh_token: null, spotify_connected: false })
+      supabase
+        .from("app_data")
+        .update({
+          spotify_token: null,
+          spotify_refresh_token: null,
+          spotify_connected: false,
+        })
         .eq("id", user.id)
-        .then(r => { if (r.error) console.error("[spotify disconnect error]", r.error); });
+        .then((r) => {
+          if (r.error) console.error("[spotify disconnect error]", r.error);
+        });
     }
   };
 
-  return { token, expired, login, disconnect, searchAlbums, getTracklist, getNewReleases };
+  return {
+    token,
+    expired,
+    login,
+    disconnect,
+    searchAlbums,
+    getTracklist,
+    getNewReleases,
+  };
 }
 
 export type SpotifyApi = ReturnType<typeof useSpotify>;

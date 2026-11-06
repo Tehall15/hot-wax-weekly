@@ -68,7 +68,11 @@ export interface AppDataRow {
   spotify_connected?: boolean;
 }
 
-export type NotificationType = "follow" | "reaction" | "comment" | "recommendation";
+export type NotificationType =
+  | "follow"
+  | "reaction"
+  | "comment"
+  | "recommendation";
 
 export interface AppNotification {
   id?: string;

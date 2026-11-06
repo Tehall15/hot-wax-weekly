@@ -1,12 +1,16 @@
-import { AlbumArt } from "../components/ui";
-import type { CSSProperties } from "react";
-import AlbumSearch from "../components/AlbumSearch";
+import AlbumArt from "@/components/ui/AlbumArt";
+import { Button } from "@/components/ui/button";
+import AlbumSearch from "../components/album/AlbumSearch";
 import type { SpotifyApi } from "../hooks/useSpotify";
 import type { Album, ListenLaterItem } from "../types";
 
-const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
-
-export default function ListenLaterTab({ listenLater, addLL, removeLL, sp, onMoveToReview }: {
+export default function ListenLaterTab({
+  listenLater,
+  addLL,
+  removeLL,
+  sp,
+  onMoveToReview,
+}: {
   listenLater: ListenLaterItem[];
   addLL: (album: Album) => void;
   removeLL: (idx: number) => void;
@@ -15,31 +19,50 @@ export default function ListenLaterTab({ listenLater, addLL, removeLL, sp, onMov
 }) {
   return (
     <div>
-      <div style={{ ...card, background: "#0e0e20" }}>
-        <AlbumSearch searchFn={sp.token ? sp.searchAlbums : undefined} onSelect={addLL} />
+      <div className="mt-4 rounded-xl border border-border bg-card p-4">
+        <AlbumSearch
+          searchFn={sp.token ? sp.searchAlbums : undefined}
+          onSelect={addLL}
+        />
       </div>
-      {listenLater.length === 0
-        ? <div style={{ ...card, textAlign: "center", padding: 40, color: "#555" }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🎧</div>Nothing queued.
-          </div>
-        : listenLater.map((a, i) => (
-          <div key={i} style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
+      {listenLater.length === 0 ? (
+        <div className="mt-4 rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
+          <div className="mb-3 text-4xl">🎧</div>Nothing queued.
+        </div>
+      ) : (
+        listenLater.map((a, i) => (
+          <div
+            key={i}
+            className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-card p-4"
+          >
             <AlbumArt src={a.image} size={48} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.album}</div>
-              <div style={{ color: "#777", fontSize: 12 }}>{a.artist}{a.year ? ` · ${a.year}` : ""}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{a.album}</div>
+              <div className="text-xs text-muted-foreground">
+                {a.artist}
+                {a.year ? ` · ${a.year}` : ""}
+              </div>
             </div>
-            <button onClick={() => onMoveToReview(a, i)}
-              style={{ background: "#1a1a2e", border: "1px solid #2a2a4e", borderRadius: 6,
-                padding: "5px 10px", fontSize: 11, color: "#aaa", cursor: "pointer",
-                whiteSpace: "nowrap", flexShrink: 0 }}>
+            <Button
+              onClick={() => onMoveToReview(a, i)}
+              variant="outline"
+              size="sm"
+              className="shrink-0 whitespace-nowrap text-xs"
+            >
               + This Week
-            </button>
-            <button onClick={() => removeLL(i)}
-              style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>×</button>
+            </Button>
+            <Button
+              onClick={() => removeLL(i)}
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove ${a.album} from listen later`}
+              className="shrink-0 text-muted-foreground"
+            >
+              ×
+            </Button>
           </div>
         ))
-      }
+      )}
     </div>
   );
 }
