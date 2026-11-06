@@ -1,6 +1,9 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+
+console.info(`[Hot Wax Weekly] Build commit: ${__BUILD_COMMIT__}; built: ${__BUILD_TIME__}`);
+
 const App = lazy(() => import("./App"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 

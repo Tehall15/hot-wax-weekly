@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+declare const __BUILD_COMMIT__: string;
+declare const __BUILD_TIME__: string;
+
 interface ImportMetaEnv {
   readonly VITE_SPOTIFY_CLIENT_ID?: string;
   readonly VITE_SPOTIFY_REDIRECT_URI?: string;

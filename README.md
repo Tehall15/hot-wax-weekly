@@ -18,6 +18,15 @@ URI registered in the Spotify dashboard. Set `VITE_SPOTIFY_REDIRECT_URI` to
 the registered URI; if omitted, the current page origin is used. Register the
 local URI as well as the production URI in the Spotify dashboard.
 
+## Identifying a deployment
+
+Open the deployed app and check the browser developer console for
+`[Hot Wax Weekly] Build commit: ...; built: ...`. The commit identifies the
+source revision; the UTC build time distinguishes rebuilds of the same commit.
+On Vercel the commit comes from `VERCEL_GIT_COMMIT_SHA`. Local builds use the
+current Git commit and may also contain uncommitted changes. If neither source
+is available, the commit is reported as `unknown`.
+
 ## UI styling
 
 The UI uses Tailwind CSS v4 through the Vite plugin and shadcn/ui components
