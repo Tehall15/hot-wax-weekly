@@ -25,7 +25,12 @@ import type {
 } from "./types";
 import { slugify } from "./utils/format";
 import Header from "./components/layout/Header";
-import { emptyJournal, loadJournal, saveJournal, type JournalData } from "./lib/appData";
+import {
+  emptyJournal,
+  loadJournal,
+  saveJournal,
+  type JournalData,
+} from "./lib/appData";
 import { createSaveQueue, type SaveState } from "./lib/saveQueue";
 
 type TabId = "review" | "hottest" | "collection" | "listen" | "history";
@@ -40,7 +45,6 @@ export default function App() {
   const [top4Year, setTop4Year] = useState<Top4>([null, null, null, null]);
   const [slots, setSlots] = useState<Slot[]>(EMPTY);
   const [weekKey, setWeekKey] = useState(getWeekKey);
-  const [wrapYear, setWrapYear] = useState(NOW_YEAR);
   const [editTop4, setEditTop4] = useState<Which | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -50,15 +54,26 @@ export default function App() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const [journalStatus, setJournalStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [journalStatus, setJournalStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveStatus, setSaveStatus] = useState<SaveState>("idle");
-  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [notificationError, setNotificationError] = useState<string | null>(
+    null,
+  );
   const journalRef = useRef<JournalData>(emptyJournal());
-  const saveQueueRef = useRef<ReturnType<typeof createSaveQueue<JournalData>> | null>(null);
-  const displayNameRef = useRef<{ userId: string | null; name: string | null }>({ userId: null, name: null });
-  displayNameRef.current = { userId: user?.id ?? null, name: user?.user_metadata?.display_name || null };
+  const saveQueueRef = useRef<ReturnType<
+    typeof createSaveQueue<JournalData>
+  > | null>(null);
+  const displayNameRef = useRef<{ userId: string | null; name: string | null }>(
+    { userId: null, name: null },
+  );
+  displayNameRef.current = {
+    userId: user?.id ?? null,
+    name: user?.user_metadata?.display_name || null,
+  };
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
@@ -117,34 +132,39 @@ export default function App() {
     setLoadedUserId(null);
     setJournalStatus("loading");
     if (userId) {
-      loadJournal(userId).then((journal) => {
-        if (cancelled) return;
-        journalRef.current = journal;
-        setReviews(journal.reviews);
-        setListenLater(journal.listenLater);
-        setTop4All(journal.top4All);
-        setTop4Year(journal.top4Year);
-        setAvatar(journal.avatar);
-        setSlots(buildSlotsFromReviews(journal.reviews, getWeekKey()));
-        saveQueueRef.current = createSaveQueue(
-          (data: JournalData) => saveJournal(
-            userId,
-            displayNameRef.current.userId === userId ? displayNameRef.current.name : initialDisplayName,
-            data,
-          ),
-          (status, error) => {
-            if (cancelled) return;
-            if (error) console.error("[journal save failed]", error);
-            setSaveStatus(status);
-          },
-        );
-        setJournalStatus("ready");
-        setLoadedUserId(userId);
-      }).catch((error: unknown) => {
-        if (cancelled) return;
-        console.error("[journal load failed]", error);
-        setJournalStatus("error");
-      });
+      loadJournal(userId)
+        .then((journal) => {
+          if (cancelled) return;
+          journalRef.current = journal;
+          setReviews(journal.reviews);
+          setListenLater(journal.listenLater);
+          setTop4All(journal.top4All);
+          setTop4Year(journal.top4Year);
+          setAvatar(journal.avatar);
+          setSlots(buildSlotsFromReviews(journal.reviews, getWeekKey()));
+          saveQueueRef.current = createSaveQueue(
+            (data: JournalData) =>
+              saveJournal(
+                userId,
+                displayNameRef.current.userId === userId
+                  ? displayNameRef.current.name
+                  : initialDisplayName,
+                data,
+              ),
+            (status, error) => {
+              if (cancelled) return;
+              if (error) console.error("[journal save failed]", error);
+              setSaveStatus(status);
+            },
+          );
+          setJournalStatus("ready");
+          setLoadedUserId(userId);
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          console.error("[journal load failed]", error);
+          setJournalStatus("error");
+        });
     }
     return () => {
       cancelled = true;
@@ -216,11 +236,14 @@ export default function App() {
       if (error) throw error;
     } catch (error) {
       console.error("[notifications update failed]", error);
-      if (displayNameRef.current.userId === userId) setNotificationError("Could not mark notifications as read.");
+      if (displayNameRef.current.userId === userId)
+        setNotificationError("Could not mark notifications as read.");
       return;
     }
     if (displayNameRef.current.userId !== userId) return;
-    setNotifications((prev) => prev.filter((notification) => !ids.has(notification.id)));
+    setNotifications((prev) =>
+      prev.filter((notification) => !ids.has(notification.id)),
+    );
     // Mark items as read in the feed so the red borders clear — but keep them visible
     setNotifFeed((prev) =>
       prev.map((n) => (ids.has(n.id) ? { ...n, read: true } : n)),
@@ -420,10 +443,14 @@ export default function App() {
   if (journalStatus !== "ready" || loadedUserId !== user.id) {
     return (
       <div className="mx-auto max-w-xl p-8 text-center" role="status">
-        {journalStatus === "loading" ? "Loading your journal…" : (
+        {journalStatus === "loading" ? (
+          "Loading your journal…"
+        ) : (
           <>
             <p>Could not load your journal. Please try again.</p>
-            <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>Retry</button>
+            <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+              Retry
+            </button>
           </>
         )}
       </div>
@@ -476,13 +503,29 @@ export default function App() {
     <div className="mx-auto min-h-screen max-w-[720px] bg-background px-3.5 pb-[90px] font-serif text-foreground">
       {notificationError && (
         <div role="alert" className="p-2 text-center text-sm text-destructive">
-          {notificationError} <button type="button" onClick={() => setNotificationError(null)}>Dismiss</button>
+          {notificationError}{" "}
+          <button type="button" onClick={() => setNotificationError(null)}>
+            Dismiss
+          </button>
         </div>
       )}
       {saveStatus !== "idle" && (
-        <div role={saveStatus === "error" ? "alert" : "status"} className="p-2 text-center text-sm">
-          {saveStatus === "saving" ? "Saving changes…" : (
-            <>Could not save your changes. <button type="button" onClick={() => saveQueueRef.current?.retry()}>Retry</button></>
+        <div
+          role={saveStatus === "error" ? "alert" : "status"}
+          className="p-2 text-center text-sm"
+        >
+          {saveStatus === "saving" ? (
+            "Saving changes…"
+          ) : (
+            <>
+              Could not save your changes.{" "}
+              <button
+                type="button"
+                onClick={() => saveQueueRef.current?.retry()}
+              >
+                Retry
+              </button>
+            </>
           )}
         </div>
       )}
