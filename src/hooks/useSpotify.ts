@@ -28,7 +28,7 @@ const toAlbum = (a: SpotifyAlbumItem): Album => ({
   image: a.images?.[1]?.url || a.images?.[0]?.url || null,
 });
 
-const REDIRECT = "https://hot-wax-weekly-8e4u-nu.vercel.app";
+const REDIRECT = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || window.location.origin;
 
 export default function useSpotify(
   clientId: string | undefined,
@@ -126,7 +126,7 @@ export default function useSpotify(
       .then(undefined, (err) => console.error("[spotify restore failed]", err));
   }, [user]);
 
-  const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshAccessToken = useCallback(async (): Promise<string | null> => {
     const rt = refreshTokenRef.current;
     if (!rt) return null;
     try {
@@ -172,10 +172,13 @@ export default function useSpotify(
       setToken(null);
       return null;
     }
-  };
+  }, [clientId, user]);
 
   const login = async () => {
-    if (!clientId) return;
+    if (!clientId) {
+      window.alert("Spotify is not configured. Set VITE_SPOTIFY_CLIENT_ID.");
+      return;
+    }
     const codeVerifier = generateRandomString(64);
     const codeChallenge = base64encode(await sha256(codeVerifier));
     localStorage.setItem("code_verifier", codeVerifier);
@@ -190,7 +193,7 @@ export default function useSpotify(
     window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
   };
 
-  const api = async <T>(
+  const api = useCallback(async <T>(
     path: string,
     currentToken: string | null = token,
   ): Promise<T | null> => {
@@ -233,7 +236,7 @@ export default function useSpotify(
     } catch {
       return null;
     }
-  };
+  }, [token, refreshAccessToken]);
 
   const searchAlbums = useCallback(
     async (q: string): Promise<Album[]> => {
@@ -244,8 +247,8 @@ export default function useSpotify(
       if (!data?.albums?.items) return [];
       return data.albums.items.map(toAlbum);
     },
-    [token],
-  ); // eslint-disable-line react-hooks/exhaustive-deps
+    [token, api],
+  );
 
   const getTracklist = useCallback(
     (spotifyId: string): Promise<Track[]> => {
@@ -276,8 +279,8 @@ export default function useSpotify(
       }
       return inflightCache.current.get(spotifyId) ?? Promise.resolve([]);
     },
-    [token],
-  ); // eslint-disable-line react-hooks/exhaustive-deps
+    [token, api],
+  );
 
   const getNewReleases = useCallback(async (): Promise<Album[]> => {
     if (!token) return [];
@@ -286,7 +289,7 @@ export default function useSpotify(
     );
     if (!data?.albums?.items) return [];
     return data.albums.items.map(toAlbum);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, api]);
 
   const disconnect = () => {
     setToken(null);

@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
+import { loadCommentCounts, loadComments, loadFriendFeed, loadReactions } from "../../lib/feed";
 import type {
   Album,
-  ReactionRow,
   Review,
   ReviewComment,
-  ProfileRow,
 } from "../../types";
 import RecommendModal from "../../components/social/RecommendModal";
 import FeedItemCard from "./FeedItemCard";
@@ -31,45 +30,34 @@ export default function HottestWaxTab({
   const [comments, setComments] = useState<Record<string, ReviewComment[]>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [recommendAlbum, setRecommendAlbum] = useState<Album | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [activityVersion, setActivityVersion] = useState(0);
+  const pendingReactions = useRef(new Set<string>());
+  const pendingComments = useRef(new Set<string>());
+  const loadingComments = useRef(new Set<string>());
+  const reactionVersion = useRef(0);
+  const commentVersion = useRef(0);
 
   const displayName = user?.user_metadata?.display_name || "You";
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", user.id)
-      .then(({ data }) => {
-        const ids = (data || []).map(
-          (row: { following_id: string }) => row.following_id,
-        );
-        if (ids.length === 0) {
-          setLoading(false);
-          return;
-        }
-        supabase
-          .from("app_data")
-          .select("id, display_name, data")
-          .in("id", ids)
-          .then(({ data: rows }) => {
-            const items: FeedItem[] = [];
-            ((rows || []) as ProfileRow[]).forEach((row) => {
-              (row.data?.reviews || []).forEach((review) => {
-                items.push({
-                  review,
-                  displayName: row.display_name,
-                  userId: row.id,
-                  isMe: false,
-                  avatar: row.data?.avatar || null,
-                });
-              });
-            });
-            setFriendItems(items);
-            setLoading(false);
-          });
-      });
-  }, [user]);
+    let cancelled = false;
+    setLoading(true);
+    setFriendItems([]);
+    async function loadFriends() {
+      try {
+        const items = await loadFriendFeed(user.id);
+        if (!cancelled) setFriendItems(items);
+      } catch (err) {
+        console.error("[feed load failed]", err);
+        if (!cancelled) setError("Could not load your feed.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void loadFriends();
+    return () => { cancelled = true; };
+  }, [user.id]);
 
   const ownItems: FeedItem[] = (ownReviews || []).map((review) => ({
     review,
@@ -88,49 +76,48 @@ export default function HottestWaxTab({
 
   useEffect(() => {
     if (loading) return;
+    let cancelled = false;
     const ids = [
       ...(ownReviews || []).map((review) => review.id),
       ...friendItems.map((item) => item.review.id),
     ].filter(Boolean);
-    if (!ids.length) return;
+    if (!ids.length) {
+      setReactions({});
+      setCommentCounts({});
+      return;
+    }
 
-    supabase
-      .from("reactions")
-      .select("review_id, emoji, user_id")
-      .in("review_id", ids)
-      .then(({ data }) => {
-        const map: ReactionMap = {};
-        ((data || []) as ReactionRow[]).forEach((reaction) => {
-          if (!map[reaction.review_id]) map[reaction.review_id] = {};
-          if (!map[reaction.review_id][reaction.emoji]) {
-            map[reaction.review_id][reaction.emoji] = { count: 0, mine: false };
-          }
-          map[reaction.review_id][reaction.emoji].count++;
-          if (reaction.user_id === user.id) {
-            map[reaction.review_id][reaction.emoji].mine = true;
-          }
-        });
+    const reactionsAtRequest = reactionVersion.current;
+    const commentsAtRequest = commentVersion.current;
+    loadReactions(ids, user.id)
+      .then((map) => {
+        if (cancelled || reactionVersion.current !== reactionsAtRequest || pendingReactions.current.size) return;
         setReactions(map);
+      }).catch((error: unknown) => {
+        console.error("[reaction load failed]", error);
+        if (!cancelled) setError("Could not load reactions.");
       });
 
-    supabase
-      .from("comments")
-      .select("review_id")
-      .in("review_id", ids)
-      .then(({ data }) => {
-        const map: Record<string, number> = {};
-        (data || []).forEach((comment: { review_id: string }) => {
-          map[comment.review_id] = (map[comment.review_id] || 0) + 1;
-        });
+    loadCommentCounts(ids)
+      .then((map) => {
+        if (cancelled || commentVersion.current !== commentsAtRequest || pendingComments.current.size) return;
         setCommentCounts(map);
+      }).catch((error: unknown) => {
+        console.error("[comment count load failed]", error);
+        if (!cancelled) setError("Could not load comment counts.");
       });
-  }, [loading]);
+    return () => { cancelled = true; };
+  }, [loading, ownReviews, friendItems, user.id, activityVersion]);
 
   const toggleReaction = async (
     reviewId: string,
     emoji: string,
     reviewOwnerId?: string,
   ) => {
+    const key = `${reviewId}:${emoji}`;
+    if (pendingReactions.current.has(key)) return;
+    pendingReactions.current.add(key);
+    reactionVersion.current++;
     const isMine = reactions[reviewId]?.[emoji]?.mine;
     setReactions((previous) => ({
       ...previous,
@@ -144,94 +131,163 @@ export default function HottestWaxTab({
         },
       },
     }));
-    if (isMine) {
-      await supabase
-        .from("reactions")
-        .delete()
-        .eq("review_id", reviewId)
-        .eq("user_id", user.id)
-        .eq("emoji", emoji);
-    } else {
-      const name = user.user_metadata?.display_name || "Someone";
-      await supabase.from("reactions").insert({
-        review_id: reviewId,
-        user_id: user.id,
-        display_name: name,
-        emoji,
-      });
-      if (reviewOwnerId && reviewOwnerId !== user.id) {
-        await supabase.from("notifications").insert({
-          user_id: reviewOwnerId,
-          type: "reaction",
-          from_user_id: user.id,
-          from_display_name: name,
+    try {
+      if (isMine) {
+        const { error } = await supabase
+          .from("reactions")
+          .delete()
+          .eq("review_id", reviewId)
+          .eq("user_id", user.id)
+          .eq("emoji", emoji);
+        if (error) throw error;
+      } else {
+        const name = user.user_metadata?.display_name || "Someone";
+        const { error } = await supabase.from("reactions").insert({
+          review_id: reviewId,
+          user_id: user.id,
+          display_name: name,
+          emoji,
         });
+        if (error) throw error;
+        if (reviewOwnerId && reviewOwnerId !== user.id) {
+          try {
+            const { error: notificationError } = await supabase.from("notifications").insert({
+              user_id: reviewOwnerId,
+              type: "reaction",
+              from_user_id: user.id,
+              from_display_name: name,
+            });
+            if (notificationError) throw notificationError;
+          } catch (notificationError) {
+            console.error("[reaction notification failed]", notificationError);
+            setError("Reaction saved, but the notification could not be sent.");
+          }
+        }
       }
+    } catch (err) {
+      console.error("[reaction update failed]", err);
+      setError("Could not update your reaction.");
+      setReactions((previous) => ({
+        ...previous,
+        [reviewId]: { ...previous[reviewId], [emoji]: {
+          count: isMine ? (previous[reviewId]?.[emoji]?.count || 0) + 1 : Math.max(0, (previous[reviewId]?.[emoji]?.count || 1) - 1),
+          mine: !!isMine,
+        } },
+      }));
+    } finally {
+      reactionVersion.current++;
+      pendingReactions.current.delete(key);
+      setActivityVersion((version) => version + 1);
     }
   };
 
   const toggleComments = async (reviewId: string) => {
     const isOpen = openComments[reviewId];
     setOpenComments((previous) => ({ ...previous, [reviewId]: !isOpen }));
-    if (!isOpen && !comments[reviewId]) {
-      const { data } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("review_id", reviewId)
-        .order("created_at", { ascending: true });
-      setComments((previous) => ({
-        ...previous,
-        [reviewId]: (data || []) as ReviewComment[],
-      }));
+    if (!isOpen && !comments[reviewId] && !loadingComments.current.has(reviewId)) {
+      loadingComments.current.add(reviewId);
+      try {
+        const data = await loadComments(reviewId);
+        setComments((previous) => ({
+          ...previous,
+          [reviewId]: data,
+        }));
+      } catch (error) {
+        console.error("[comments load failed]", error);
+        setError("Could not load comments.");
+        setOpenComments((previous) => ({ ...previous, [reviewId]: false }));
+      } finally {
+        loadingComments.current.delete(reviewId);
+      }
     }
   };
 
   const deleteComment = async (reviewId: string, commentId: string) => {
-    await supabase.from("comments").delete().eq("id", commentId);
-    setComments((previous) => ({
-      ...previous,
-      [reviewId]: (previous[reviewId] || []).filter(
-        (comment) => comment.id !== commentId,
-      ),
-    }));
-    setCommentCounts((previous) => ({
-      ...previous,
-      [reviewId]: Math.max(0, (previous[reviewId] || 1) - 1),
-    }));
+    const key = `delete:${commentId}`;
+    if (pendingComments.current.has(key)) return;
+    pendingComments.current.add(key);
+    commentVersion.current++;
+    try {
+      const { error } = await supabase.from("comments").delete().eq("id", commentId);
+      if (error) throw error;
+      setComments((previous) => ({
+        ...previous,
+        [reviewId]: (previous[reviewId] || []).filter(
+          (comment) => comment.id !== commentId,
+        ),
+      }));
+      setCommentCounts((previous) => ({
+        ...previous,
+        [reviewId]: Math.max(0, (previous[reviewId] || 1) - 1),
+      }));
+    } catch (error) {
+      console.error("[comment delete failed]", error);
+      setError("Could not delete the comment.");
+    } finally {
+      commentVersion.current++;
+      pendingComments.current.delete(key);
+      setActivityVersion((version) => version + 1);
+    }
   };
 
   const submitComment = async (reviewId: string, reviewOwnerId?: string) => {
     const body = (commentInput[reviewId] || "").trim();
-    if (!body) return;
+    if (!body || !comments[reviewId]) return;
+    const key = `post:${reviewId}`;
+    if (pendingComments.current.has(key)) return;
+    pendingComments.current.add(key);
+    commentVersion.current++;
     const name = user.user_metadata?.display_name || "Someone";
-    const { data } = await supabase
-      .from("comments")
-      .insert({ review_id: reviewId, user_id: user.id, display_name: name, body })
-      .select()
-      .single();
-    if (data) {
-      const comment = data as ReviewComment;
-      setComments((previous) => ({
-        ...previous,
-        [reviewId]: [...(previous[reviewId] || []), comment],
-      }));
-      setCommentCounts((previous) => ({
-        ...previous,
-        [reviewId]: (previous[reviewId] || 0) + 1,
-      }));
-      setCommentInput((previous) => ({ ...previous, [reviewId]: "" }));
-      if (reviewOwnerId && reviewOwnerId !== user.id) {
-        await supabase.from("notifications").insert({
+    let comment: ReviewComment;
+    try {
+      const { data, error } = await supabase
+        .from("comments")
+        .insert({ review_id: reviewId, user_id: user.id, display_name: name, body })
+        .select()
+        .single();
+      if (error) throw error;
+      if (!data) throw new Error("Comment was not returned after saving");
+      comment = data as ReviewComment;
+    } catch (error) {
+      console.error("[comment save failed]", error);
+      setError("Could not post your comment.");
+      commentVersion.current++;
+      pendingComments.current.delete(key);
+      setActivityVersion((version) => version + 1);
+      return;
+    }
+    setComments((previous) => ({
+      ...previous,
+      [reviewId]: [...(previous[reviewId] || []), comment],
+    }));
+    setCommentCounts((previous) => ({
+      ...previous,
+      [reviewId]: (previous[reviewId] || 0) + 1,
+    }));
+    setCommentInput((previous) => ({
+      ...previous,
+      [reviewId]: previous[reviewId]?.trim() === body ? "" : previous[reviewId],
+    }));
+    if (reviewOwnerId && reviewOwnerId !== user.id) {
+      try {
+        const { error: notificationError } = await supabase.from("notifications").insert({
           user_id: reviewOwnerId,
           type: "comment",
           from_user_id: user.id,
           from_display_name: name,
         });
+        if (notificationError) throw notificationError;
+      } catch (notificationError) {
+        console.error("[comment notification failed]", notificationError);
+        setError("Comment saved, but the notification could not be sent.");
       }
     }
+    commentVersion.current++;
+    pendingComments.current.delete(key);
+    setActivityVersion((version) => version + 1);
   };
 
-  if (loading && feed.length === 0) {
+  if (loading && feed.length === 0 && !error) {
     return (
       <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
         Loading…
@@ -239,7 +295,7 @@ export default function HottestWaxTab({
     );
   }
 
-  if (!loading && feed.length === 0) {
+  if (!loading && feed.length === 0 && !error) {
     return (
       <div className="rounded-xl border border-border bg-card p-10 text-center">
         <div className="mb-3 text-3xl">🎵</div>
@@ -253,6 +309,7 @@ export default function HottestWaxTab({
 
   return (
     <>
+      {error && <div role="alert" className="p-3 text-destructive">{error} <button type="button" onClick={() => setError(null)}>Dismiss</button></div>}
       {recommendAlbum && (
         <RecommendModal
           album={recommendAlbum}
@@ -290,4 +347,3 @@ export default function HottestWaxTab({
     </>
   );
 }
-

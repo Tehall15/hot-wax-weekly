@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import useSpotify from "./hooks/useSpotify";
 import { EMPTY, buildSlotsFromReviews } from "./utils/slots";
 import { RS500 } from "./utils/data";
-import { NOW_YEAR, getWeekKey } from "./utils/time";
+import { NOW_YEAR, getWeekKey, shiftWeekKey } from "./utils/time";
 import AuthScreen from "./pages/AuthScreen";
 import FriendsPanel from "./components/social/FriendsPanel";
 import AvatarPicker from "./components/avatar/AvatarPicker";
@@ -22,10 +22,11 @@ import type {
   Slot,
   SlotField,
   Top4,
-  Top4Item,
 } from "./types";
 import { slugify } from "./utils/format";
 import Header from "./components/layout/Header";
+import { emptyJournal, loadJournal, saveJournal, type JournalData } from "./lib/appData";
+import { createSaveQueue, type SaveState } from "./lib/saveQueue";
 
 type TabId = "review" | "hottest" | "collection" | "listen" | "history";
 type Which = "all" | "year";
@@ -49,6 +50,15 @@ export default function App() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [journalStatus, setJournalStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<SaveState>("idle");
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const journalRef = useRef<JournalData>(emptyJournal());
+  const saveQueueRef = useRef<ReturnType<typeof createSaveQueue<JournalData>> | null>(null);
+  const displayNameRef = useRef<{ userId: string | null; name: string | null }>({ userId: null, name: null });
+  displayNameRef.current = { userId: user?.id ?? null, name: user?.user_metadata?.display_name || null };
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
   const sp = useSpotify(clientId, user);
@@ -88,70 +98,68 @@ export default function App() {
       .then(({ error }) => {
         if (error) console.error("[name sync]", error);
       });
-  }, [user?.id]);
+  }, [user?.id, user?.user_metadata?.display_name]);
 
-  // Effect B: Hydration
   useEffect(() => {
-    if (!user) return;
     let cancelled = false;
-
-    supabase
-      .from("app_data")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(
-        ({ data, error }) => {
-          if (cancelled) return;
-          if (error) {
-            console.error("[hydration error]", error);
-            return;
-          }
-          // Sync display_name into app_data if it's missing or stale
-          const dn = user.user_metadata?.display_name || null;
-          if (dn && data?.display_name !== dn) {
-            supabase
-              .from("app_data")
-              .upsert({ id: user.id, display_name: dn, data: data?.data || {} })
-              .then(() => {});
-          }
-          if (data?.data?.avatar) setAvatar(data.data.avatar);
-          if (!data?.data?.reviews?.length) return;
-          const d = data.data;
-          setReviews(d.reviews!);
-          if (d.listenLater?.length) setListenLater(d.listenLater);
-          // Migrate top4: old format stores review ID strings, new format stores album objects
-          const migrateTop4 = (arr: (Top4Item | string)[] | undefined): Top4 =>
-            (arr || [null, null, null, null]).map((item): Top4Item => {
-              if (!item) return null;
-              if (typeof item === "object") return item;
-              const r = d.reviews!.find((x: Review) => x.id === item);
-              return r
-                ? {
-                    artist: r.artist,
-                    album: r.album,
-                    image: r.image || null,
-                    spotifyId: r.spotifyId || null,
-                  }
-                : null;
-            });
-          if (d.top4All) setTop4All(migrateTop4(d.top4All));
-          if (d.top4Year) setTop4Year(migrateTop4(d.top4Year));
-          setSlots(buildSlotsFromReviews(d.reviews!, getWeekKey()));
-        },
-        (err) => {
-          if (!cancelled) console.error("[hydration failed]", err);
-        },
-      );
-
+    const userId = user?.id;
+    const initialDisplayName = displayNameRef.current.name;
+    const initial = emptyJournal();
+    journalRef.current = initial;
+    saveQueueRef.current = null;
+    setReviews(initial.reviews);
+    setListenLater(initial.listenLater);
+    setTop4All(initial.top4All);
+    setTop4Year(initial.top4Year);
+    setAvatar(null);
+    setSlots(EMPTY());
+    setSaveStatus("idle");
+    setLoadedUserId(null);
+    setJournalStatus("loading");
+    if (userId) {
+      loadJournal(userId).then((journal) => {
+        if (cancelled) return;
+        journalRef.current = journal;
+        setReviews(journal.reviews);
+        setListenLater(journal.listenLater);
+        setTop4All(journal.top4All);
+        setTop4Year(journal.top4Year);
+        setAvatar(journal.avatar);
+        setSlots(buildSlotsFromReviews(journal.reviews, getWeekKey()));
+        saveQueueRef.current = createSaveQueue(
+          (data: JournalData) => saveJournal(
+            userId,
+            displayNameRef.current.userId === userId ? displayNameRef.current.name : initialDisplayName,
+            data,
+          ),
+          (status, error) => {
+            if (cancelled) return;
+            if (error) console.error("[journal save failed]", error);
+            setSaveStatus(status);
+          },
+        );
+        setJournalStatus("ready");
+        setLoadedUserId(userId);
+      }).catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("[journal load failed]", error);
+        setJournalStatus("error");
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.id, loadAttempt]);
 
   // Effect: Load notifications
   useEffect(() => {
+    setNotifications([]);
+    setNotifFeed([]);
+    setNotificationError(null);
+    setPanelOpen(false);
+    setAvatarPickerOpen(false);
     if (!user) return;
+    let cancelled = false;
     // Load all notifications for the feed, derive unread count for badge
     supabase
       .from("notifications")
@@ -159,7 +167,13 @@ export default function App() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[notifications load failed]", error);
+          setNotificationError("Could not load notifications.");
+          return;
+        }
         const all: AppNotification[] = data || [];
         setNotifFeed(all);
         setNotifications(all.filter((n) => !n.read));
@@ -184,61 +198,53 @@ export default function App() {
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [user]);
 
   const markNotificationsRead = async () => {
     if (!user || notifications.length === 0) return;
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
-    setNotifications([]);
+    const userId = user.id;
+    const ids = new Set(notifications.map((notification) => notification.id));
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .in("id", [...ids]);
+      if (error) throw error;
+    } catch (error) {
+      console.error("[notifications update failed]", error);
+      if (displayNameRef.current.userId === userId) setNotificationError("Could not mark notifications as read.");
+      return;
+    }
+    if (displayNameRef.current.userId !== userId) return;
+    setNotifications((prev) => prev.filter((notification) => !ids.has(notification.id)));
     // Mark items as read in the feed so the red borders clear — but keep them visible
     setNotifFeed((prev) =>
-      prev.map((n) => (n.read ? n : { ...n, read: true })),
+      prev.map((n) => (ids.has(n.id) ? { ...n, read: true } : n)),
     );
   };
 
-  const persist = (
-    r = reviews,
-    ll = listenLater,
-    t4a = top4All,
-    t4y = top4Year,
-    av = avatar,
-  ) => {
-    if (!user) return;
-    const dn = user.user_metadata?.display_name || null;
-    supabase
-      .from("app_data")
-      .upsert({
-        id: user.id,
-        display_name: dn,
-        data: {
-          reviews: r,
-          listenLater: ll,
-          top4All: t4a,
-          top4Year: t4y,
-          avatar: av,
-        },
-      })
-      .then((res) => {
-        if (res.error) console.error("[persist error]", res.error);
-      }, console.error);
+  const persist = (patch: Partial<JournalData>) => {
+    if (!saveQueueRef.current) {
+      console.error("[journal save failed] Journal is not loaded");
+      setSaveStatus("error");
+      return;
+    }
+    journalRef.current = { ...journalRef.current, ...patch };
+    saveQueueRef.current.enqueue(journalRef.current);
   };
 
   const updateAvatar = (val: string | null) => {
     setAvatar(val);
-    persist(reviews, listenLater, top4All, top4Year, val);
+    persist({ avatar: val });
     setAvatarPickerOpen(false);
   };
 
   const shiftWeek = (days: number) => {
-    const d = new Date(weekKey);
-    d.setDate(d.getDate() + days);
-    const newKey = d.toISOString().split("T")[0];
+    const newKey = shiftWeekKey(weekKey, days);
     setWeekKey(newKey);
     setSlots(buildSlotsFromReviews(reviews, newKey));
   };
@@ -318,14 +324,14 @@ export default function App() {
     );
     const updated = [...filtered, ...entries];
     setReviews(updated);
-    persist(updated);
+    persist({ reviews: updated });
     setTab("collection");
   };
 
   const del = (id: string) => {
     const updated = reviews.filter((r) => r.id !== id);
     setReviews(updated);
-    persist(updated);
+    persist({ reviews: updated });
   };
 
   const addLL = (album: Album) => {
@@ -340,13 +346,13 @@ export default function App() {
       { ...album, addedAt: new Date().toISOString() },
     ];
     setListenLater(updated);
-    persist(reviews, updated);
+    persist({ listenLater: updated });
   };
 
   const removeLL = (idx: number) => {
     const updated = listenLater.filter((_, i) => i !== idx);
     setListenLater(updated);
-    persist(reviews, updated);
+    persist({ listenLater: updated });
   };
 
   const addPastReview = (
@@ -372,7 +378,7 @@ export default function App() {
     };
     const updated = [...reviews, entry];
     setReviews(updated);
-    persist(updated);
+    persist({ reviews: updated });
   };
 
   const pushToReview = (album: Album, llIdx: number) => {
@@ -387,12 +393,12 @@ export default function App() {
       const updated = [...top4All];
       [updated[fromIdx], updated[toIdx]] = [updated[toIdx], updated[fromIdx]];
       setTop4All(updated);
-      persist(reviews, listenLater, updated, top4Year);
+      persist({ top4All: updated });
     } else {
       const updated = [...top4Year];
       [updated[fromIdx], updated[toIdx]] = [updated[toIdx], updated[fromIdx]];
       setTop4Year(updated);
-      persist(reviews, listenLater, top4All, updated);
+      persist({ top4Year: updated });
     }
   };
 
@@ -401,16 +407,28 @@ export default function App() {
       const updated = [...top4All];
       updated[idx] = albumObj; // album object { artist, album, image, spotifyId } or null to clear
       setTop4All(updated);
-      persist(reviews, listenLater, updated, top4Year);
+      persist({ top4All: updated });
     } else {
       const updated = [...top4Year];
       updated[idx] = albumObj;
       setTop4Year(updated);
-      persist(reviews, listenLater, top4All, updated);
+      persist({ top4Year: updated });
     }
   };
 
   if (!user) return <AuthScreen />;
+  if (journalStatus !== "ready" || loadedUserId !== user.id) {
+    return (
+      <div className="mx-auto max-w-xl p-8 text-center" role="status">
+        {journalStatus === "loading" ? "Loading your journal…" : (
+          <>
+            <p>Could not load your journal. Please try again.</p>
+            <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>Retry</button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   const displayName = user.user_metadata?.display_name;
   const journalLabel = displayName
@@ -456,6 +474,18 @@ export default function App() {
 
   return (
     <div className="mx-auto min-h-screen max-w-[720px] bg-background px-3.5 pb-[90px] font-serif text-foreground">
+      {notificationError && (
+        <div role="alert" className="p-2 text-center text-sm text-destructive">
+          {notificationError} <button type="button" onClick={() => setNotificationError(null)}>Dismiss</button>
+        </div>
+      )}
+      {saveStatus !== "idle" && (
+        <div role={saveStatus === "error" ? "alert" : "status"} className="p-2 text-center text-sm">
+          {saveStatus === "saving" ? "Saving changes…" : (
+            <>Could not save your changes. <button type="button" onClick={() => saveQueueRef.current?.retry()}>Retry</button></>
+          )}
+        </div>
+      )}
       <Header
         displayName={displayName}
         journalLabel={journalLabel}

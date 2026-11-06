@@ -2,6 +2,7 @@ import AlbumArt from "@/components/ui/AlbumArt";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Review } from "../types";
+import { parseDateKey } from "../utils/time";
 
 export default function HistoryTab({
   reviews,
@@ -43,7 +44,7 @@ export default function HistoryTab({
             </div>
             <div className="mt-0.5 text-xs text-muted-foreground">
               {r.artist} · Week of{" "}
-              {new Date(r.weekKey).toLocaleDateString("en-GB", {
+              {parseDateKey(r.weekKey).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "short",
               })}

@@ -35,54 +35,84 @@ export default function FriendsPanel({
   const [allUsers, setAllUsers] = useState<ProfileRow[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(
     notifications.length > 0 ? "notifications" : "friends",
   );
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", user.id)
-      .then(({ data }) =>
-        setFollowing((data || []).map((r) => r.following_id)),
-      );
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[following load failed]", error);
+          setError("Could not load following list.");
+          return;
+        }
+        setFollowing((data || []).map((r) => r.following_id));
+      });
 
     supabase
       .from("app_data")
       .select("id, display_name, data")
       .not("display_name", "is", null)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[friends load failed]", error);
+          setError("Could not load bandmates.");
+          setLoading(false);
+          return;
+        }
         setAllUsers(
           (data || []).filter((u) => u.id !== user?.id && u.display_name),
         );
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [user]);
 
   const follow = async (targetId: string) => {
     if (!user) return;
-    await supabase
+    const { error } = await supabase
       .from("follows")
       .insert({ follower_id: user.id, following_id: targetId });
+    if (error) {
+      console.error("[follow failed]", error);
+      setError("Could not follow this bandmate.");
+      return;
+    }
+    setFollowing((prev) => [...prev, targetId]);
     const myName = user.user_metadata?.display_name || "Someone";
-    await supabase.from("notifications").insert({
+    const { error: notificationError } = await supabase.from("notifications").insert({
       user_id: targetId,
       type: "follow",
       from_user_id: user.id,
       from_display_name: myName,
     });
-    setFollowing((prev) => [...prev, targetId]);
+    if (notificationError) {
+      console.error("[follow notification failed]", notificationError);
+      setError("Follow saved, but the notification could not be sent.");
+    }
   };
 
   const unfollow = async (targetId: string) => {
     if (!user) return;
-    await supabase
+    const { error } = await supabase
       .from("follows")
       .delete()
       .eq("follower_id", user.id)
       .eq("following_id", targetId);
+    if (error) {
+      console.error("[unfollow failed]", error);
+      setError("Could not unfollow this bandmate.");
+      return;
+    }
     setFollowing((prev) => prev.filter((id) => id !== targetId));
   };
 
@@ -123,6 +153,7 @@ export default function FriendsPanel({
           <SheetTitle>Bandmates</SheetTitle>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">
+          {error && <div role="alert" className="mb-3 text-destructive">{error}</div>}
           <Tabs value={activeSection} onValueChange={handleSectionChange}>
             <TabsList className="mb-4 w-full">
               <TabsTrigger value="notifications">

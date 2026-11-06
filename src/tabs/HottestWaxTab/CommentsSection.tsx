@@ -52,12 +52,13 @@ export default function CommentsSection({
       <div className="flex gap-1.5">
         <Input
           value={commentInput}
+          disabled={!comments}
           onChange={(event) => onInputChange(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && onSubmit()}
           placeholder="Add a comment…"
           className="h-8 flex-1 text-xs"
         />
-        <Button onClick={onSubmit} size="icon" aria-label="Submit comment">
+        <Button onClick={onSubmit} size="icon" aria-label="Submit comment" disabled={!comments}>
           →
         </Button>
       </div>

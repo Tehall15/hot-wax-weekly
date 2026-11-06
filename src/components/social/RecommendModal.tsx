@@ -25,14 +25,23 @@ export default function RecommendModal({
   >([]);
   const [loading, setLoading] = useState(true);
   const [sent, setSent] = useState(new Set<string>());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", user.id)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[recommendations load failed]", error);
+          setError("Could not load bandmates.");
+          setLoading(false);
+          return;
+        }
         const ids = (data || []).map((r) => r.following_id);
         if (!ids.length) {
           setLoading(false);
@@ -42,17 +51,25 @@ export default function RecommendModal({
           .from("app_data")
           .select("id, display_name, data")
           .in("id", ids)
-          .then(({ data: rows }) => {
+          .then(({ data: rows, error }) => {
+            if (cancelled) return;
+            if (error) {
+              console.error("[recommendations profiles failed]", error);
+              setError("Could not load bandmates.");
+              setLoading(false);
+              return;
+            }
             setFollowing(rows || []);
             setLoading(false);
           });
       });
+    return () => { cancelled = true; };
   }, [user]);
 
   const send = async (target: Pick<AppDataRow, "id">) => {
     if (!user || sent.has(target.id)) return;
     const dn = user.user_metadata?.display_name || "Someone";
-    await supabase.from("notifications").insert({
+    const { error } = await supabase.from("notifications").insert({
       user_id: target.id,
       type: "recommendation",
       from_user_id: user.id,
@@ -67,6 +84,11 @@ export default function RecommendModal({
         },
       },
     });
+    if (error) {
+      console.error("[recommendation failed]", error);
+      setError("Could not send this recommendation.");
+      return;
+    }
     setSent((prev) => new Set([...prev, target.id]));
   };
 
@@ -79,6 +101,7 @@ export default function RecommendModal({
         <div className="mb-1 truncate text-xs text-muted-foreground">
           {album.album} — {album.artist}
         </div>
+        {error && <div role="alert" className="text-destructive">{error}</div>}
 
         {loading ? (
           <div className="py-5 text-center text-sm text-muted-foreground">
