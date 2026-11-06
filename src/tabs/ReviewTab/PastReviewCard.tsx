@@ -28,17 +28,18 @@ export default function PastReviewCard({
   const [tracks, setTracks] = useState<Track[]>([]);
   const [topTracks, setTopTracks] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const getTracklist = sp.getTracklist;
 
   useEffect(() => {
-    if (!album?.spotifyId || !sp?.getTracklist) return;
+    if (!album?.spotifyId) return;
     let cancelled = false;
-    sp.getTracklist(album.spotifyId).then((t) => {
+    getTracklist(album.spotifyId).then((t) => {
       if (!cancelled && t?.length) setTracks(t);
     });
     return () => {
       cancelled = true;
     };
-  }, [album?.spotifyId, sp?.getTracklist]);
+  }, [album?.spotifyId, getTracklist]);
 
   const reset = () => {
     setAlbum(null);

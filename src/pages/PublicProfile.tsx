@@ -33,6 +33,7 @@ export default function PublicProfile({ slug }: { slug: string }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -42,47 +43,74 @@ export default function PublicProfile({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!currentUser || !profileUserId) return;
+    let cancelled = false;
     supabase
       .from("follows")
       .select("follower_id")
       .eq("follower_id", currentUser.id)
       .eq("following_id", profileUserId)
       .maybeSingle()
-      .then(({ data }) => setIsFollowing(!!data));
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[follow status failed]", error);
+          setError("Could not load follow status.");
+          return;
+        }
+        setIsFollowing(!!data);
+      });
+    return () => { cancelled = true; };
   }, [currentUser, profileUserId]);
 
   const follow = async () => {
     if (!currentUser || !profileUserId) return;
-    await supabase
+    const { error } = await supabase
       .from("follows")
       .insert({ follower_id: currentUser.id, following_id: profileUserId });
+    if (error) {
+      console.error("[follow failed]", error);
+      setError("Could not follow this bandmate.");
+      return;
+    }
+    setIsFollowing(true);
     const myName = currentUser.user_metadata?.display_name || "Someone";
-    await supabase.from("notifications").insert({
+    const { error: notificationError } = await supabase.from("notifications").insert({
       user_id: profileUserId,
       type: "follow",
       from_user_id: currentUser.id,
       from_display_name: myName,
     });
-    setIsFollowing(true);
+    if (notificationError) {
+      console.error("[follow notification failed]", notificationError);
+      setError("Follow saved, but the notification could not be sent.");
+    }
   };
 
   const unfollow = async () => {
     if (!currentUser || !profileUserId) return;
-    await supabase
+    const { error } = await supabase
       .from("follows")
       .delete()
       .eq("follower_id", currentUser.id)
       .eq("following_id", profileUserId);
+    if (error) {
+      console.error("[unfollow failed]", error);
+      setError("Could not unfollow this bandmate.");
+      return;
+    }
     setIsFollowing(false);
   };
 
   useEffect(() => {
+    let cancelled = false;
     supabase
       .from("app_data")
       .select("id, display_name, data")
       .then(({ data: rows, error }) => {
+        if (cancelled) return;
         if (error) {
-          setNotFound(true);
+          console.error("[profile load failed]", error);
+          setError("Could not load this profile.");
           setLoading(false);
           return;
         }
@@ -104,10 +132,13 @@ export default function PublicProfile({ slug }: { slug: string }) {
         });
         setLoading(false);
       })
-      .then(undefined, () => {
-        setNotFound(true);
+      .then(undefined, (error) => {
+        if (cancelled) return;
+        console.error("[profile load failed]", error);
+        setError("Could not load this profile.");
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [slug]);
 
   if (loading)
@@ -116,6 +147,9 @@ export default function PublicProfile({ slug }: { slug: string }) {
         <div className="text-sm text-muted-foreground">Loading…</div>
       </div>
     );
+
+  if (error && !profile)
+    return <div role="alert" className="p-8 text-destructive">{error}</div>;
 
   if (notFound)
     return (
@@ -165,6 +199,7 @@ export default function PublicProfile({ slug }: { slug: string }) {
 
   return (
     <div className="mx-auto box-content min-h-screen max-w-[720px] bg-background px-[14px] pb-[90px] text-foreground [font-family:Georgia,serif]">
+      {error && <div role="alert" className="p-3 text-destructive">{error}</div>}
       <header className="pt-7 text-center">
         <h1 className="m-0 text-[26px] font-bold">🔥 Hot Wax Weekly</h1>
         <p className="mt-1 mb-0 text-xs italic text-muted-foreground">{journalLabel}</p>

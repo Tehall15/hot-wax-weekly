@@ -1,21 +1,16 @@
 import type { Review } from "../../types";
+import { getWeekKey, shiftWeekKey } from "../../utils/time";
 
 function computeStreak(reviews: Review[]) {
   const weekKeys = new Set(
     reviews.filter((r) => r.weekKey).map((r) => r.weekKey),
   );
   let streak = 0;
-  const today = new Date();
-  const day = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-  monday.setHours(0, 0, 0, 0);
-  let d = new Date(monday);
+  let key = getWeekKey();
   while (true) {
-    const key = d.toISOString().split("T")[0];
     if (weekKeys.has(key)) {
       streak++;
-      d.setDate(d.getDate() - 7);
+      key = shiftWeekKey(key, -7);
     } else break;
   }
   return streak;

@@ -3,6 +3,7 @@ import SlotCard from "../../components/album/SlotCard";
 import type { SpotifyApi } from "../../hooks/useSpotify";
 import type { Album, Slot, SlotField } from "../../types";
 import PastReviewCard, { type PastSaveFn } from "./PastReviewCard";
+import { parseDateKey } from "../../utils/time";
 
 export default function ReviewTab({
   slots,
@@ -37,7 +38,7 @@ export default function ReviewTab({
         <div>
           <div className="text-xs text-muted-foreground">Week of</div>
           <div className="text-[15px] font-bold">
-            {new Date(weekKey).toLocaleDateString("en-GB", {
+            {parseDateKey(weekKey).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "long",
             })}
