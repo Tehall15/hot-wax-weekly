@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, type ChangeEvent } from "react";
 import AlbumSearch from "./AlbumSearch";
 import AvatarDisplay from "./AvatarDisplay";
+import type { SpotifyApi } from "../hooks/useSpotify";
 
 const EMOJIS = [
   "🎵","🎸","🎹","🥁","🎺","🎻","🎤","🎧","💿","📻",
@@ -8,7 +9,7 @@ const EMOJIS = [
   "🦋","🐙","👽","🤖","🦄","🍄","🌙","⭐","🎃","🏆",
 ];
 
-function resizeImage(file, size = 200) {
+function resizeImage(file: File, size = 200): Promise<string> {
   return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = ev => {
@@ -17,23 +18,30 @@ function resizeImage(file, size = 200) {
         const canvas = document.createElement("canvas");
         canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext("2d");
+        if (!ctx) return;
         const s = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
         resolve(canvas.toDataURL("image/jpeg", 0.75));
       };
-      img.src = ev.target.result;
+      img.src = ev.target?.result as string;
     };
     reader.readAsDataURL(file);
   });
 }
 
-export default function AvatarPicker({ currentAvatar, displayName, sp, onSave, onClose }) {
+export default function AvatarPicker({ currentAvatar, displayName, sp, onSave, onClose }: {
+  currentAvatar?: string | null;
+  displayName?: string | null;
+  sp?: SpotifyApi;
+  onSave: (avatar: string | null) => void;
+  onClose: () => void;
+}) {
   const [tab, setTab] = useState("emoji");
-  const [preview, setPreview] = useState(currentAvatar);
-  const fileRef = useRef();
+  const [preview, setPreview] = useState<string | null | undefined>(currentAvatar);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = async (e) => {
-    const file = e.target.files[0];
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const data = await resizeImage(file);
     setPreview(data);
@@ -106,7 +114,7 @@ export default function AvatarPicker({ currentAvatar, displayName, sp, onSave, o
           <div style={{ textAlign: "center", padding: "10px 0" }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFile}
               style={{ display: "none" }} />
-            <button onClick={() => fileRef.current.click()}
+            <button onClick={() => fileRef.current?.click()}
               style={{ background: "#1a1a2e", border: "1px solid #2a2a4e", borderRadius: 8,
                 padding: "10px 24px", color: "#aaa", fontSize: 12, cursor: "pointer" }}>
               Choose photo

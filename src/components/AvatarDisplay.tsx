@@ -1,4 +1,12 @@
-export default function AvatarDisplay({ avatar, name, size = 34, onClick, muted = false }) {
+interface Props {
+  avatar?: string | null;
+  name?: string | null;
+  size?: number;
+  onClick?: () => void;
+  muted?: boolean;
+}
+
+export default function AvatarDisplay({ avatar, name, size = 34, onClick, muted = false }: Props) {
   const isImage = avatar && (avatar.startsWith("http") || avatar.startsWith("data:"));
   const isEmoji = avatar && !isImage;
 

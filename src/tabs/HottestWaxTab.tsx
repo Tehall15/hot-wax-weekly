@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import type { Album, ListenLaterItem, ReactionRow, Review, ReviewComment } from "../types";
 import AvatarDisplay from "../components/AvatarDisplay";
 import RecommendModal from "../components/RecommendModal";
 
-function slugify(name) {
+function slugify(name?: string | null) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
 }
 
-function StarDisplay({ value }) {
+function StarDisplay({ value }: { value: number }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
       <span style={{ color: "#F4C542", fontSize: 13 }}>★</span>
@@ -17,7 +19,7 @@ function StarDisplay({ value }) {
   );
 }
 
-function AlbumArt({ src, size = 52 }) {
+function AlbumArt({ src, size = 52 }: { src?: string | null; size?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: 6, overflow: "hidden",
       background: "#1a1a2e", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -29,17 +31,32 @@ function AlbumArt({ src, size = 52 }) {
 }
 
 const EMOJIS = ["🔥", "✨", "💿", "😮"];
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+interface FeedItem {
+  review: Review;
+  displayName: string | null;
+  userId: string | undefined;
+  isMe: boolean;
+  avatar: string | null;
+}
 
-export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAvatar }) {
-  const [friendItems, setFriendItems] = useState([]);
+type ReactionMap = Record<string, Record<string, { count: number; mine: boolean }>>;
+
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+
+export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAvatar }: {
+  user: User;
+  reviews: Review[];
+  addLL?: (album: Album) => void;
+  userAvatar: string | null;
+}) {
+  const [friendItems, setFriendItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reactions, setReactions] = useState({});
-  const [commentCounts, setCommentCounts] = useState({});
-  const [openComments, setOpenComments] = useState({});
-  const [comments, setComments] = useState({});
-  const [commentInput, setCommentInput] = useState({});
-  const [recommendAlbum, setRecommendAlbum] = useState(null);
+  const [reactions, setReactions] = useState<ReactionMap>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [comments, setComments] = useState<Record<string, ReviewComment[]>>({});
+  const [commentInput, setCommentInput] = useState<Record<string, string>>({});
+  const [recommendAlbum, setRecommendAlbum] = useState<Album | null>(null);
 
   const displayName = user?.user_metadata?.display_name || "You";
 
@@ -50,15 +67,15 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
       .select("following_id")
       .eq("follower_id", user.id)
       .then(({ data }) => {
-        const ids = (data || []).map(r => r.following_id);
+        const ids = (data || []).map((r: { following_id: string }) => r.following_id);
         if (ids.length === 0) { setLoading(false); return; }
         supabase.from("app_data")
           .select("id, display_name, data")
           .in("id", ids)
           .then(({ data: rows }) => {
-            const items = [];
+            const items: FeedItem[] = [];
             (rows || []).forEach(row => {
-              (row.data?.reviews || []).forEach(r => {
+              (row.data?.reviews || []).forEach((r: Review) => {
                 items.push({ review: r, displayName: row.display_name, userId: row.id, isMe: false, avatar: row.data?.avatar || null });
               });
             });
@@ -69,9 +86,9 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
   }, [user]);
 
   // Merge own + friend reviews into feed
-  const ownItems = (ownReviews || []).map(r => ({ review: r, displayName, userId: user?.id, isMe: true, avatar: userAvatar }));
+  const ownItems: FeedItem[] = (ownReviews || []).map(r => ({ review: r, displayName, userId: user?.id, isMe: true, avatar: userAvatar }));
   const feed = [...ownItems, ...friendItems]
-    .sort((a, b) => new Date(b.review.reviewedAt) - new Date(a.review.reviewedAt))
+    .sort((a, b) => new Date(b.review.reviewedAt).getTime() - new Date(a.review.reviewedAt).getTime())
     .slice(0, 60);
 
   // Load reactions + comment counts once friends have loaded
@@ -85,8 +102,8 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
 
     supabase.from("reactions").select("review_id, emoji, user_id").in("review_id", ids)
       .then(({ data }) => {
-        const map = {};
-        (data || []).forEach(r => {
+        const map: ReactionMap = {};
+        ((data || []) as ReactionRow[]).forEach(r => {
           if (!map[r.review_id]) map[r.review_id] = {};
           if (!map[r.review_id][r.emoji]) map[r.review_id][r.emoji] = { count: 0, mine: false };
           map[r.review_id][r.emoji].count++;
@@ -97,13 +114,13 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
 
     supabase.from("comments").select("review_id").in("review_id", ids)
       .then(({ data }) => {
-        const map = {};
-        (data || []).forEach(c => { map[c.review_id] = (map[c.review_id] || 0) + 1; });
+        const map: Record<string, number> = {};
+        (data || []).forEach((c: { review_id: string }) => { map[c.review_id] = (map[c.review_id] || 0) + 1; });
         setCommentCounts(map);
       });
   }, [loading]);
 
-  const toggleReaction = async (reviewId, emoji, reviewOwnerId) => {
+  const toggleReaction = async (reviewId: string, emoji: string, reviewOwnerId?: string) => {
     const isMine = reactions[reviewId]?.[emoji]?.mine;
     // Optimistic update
     setReactions(prev => ({
@@ -134,7 +151,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
     }
   };
 
-  const toggleComments = async (reviewId) => {
+  const toggleComments = async (reviewId: string) => {
     const isOpen = openComments[reviewId];
     setOpenComments(prev => ({ ...prev, [reviewId]: !isOpen }));
     if (!isOpen && !comments[reviewId]) {
@@ -145,7 +162,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
     }
   };
 
-  const deleteComment = async (reviewId, commentId) => {
+  const deleteComment = async (reviewId: string, commentId: string) => {
     await supabase.from("comments").delete().eq("id", commentId);
     setComments(prev => ({
       ...prev,
@@ -154,7 +171,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
     setCommentCounts(prev => ({ ...prev, [reviewId]: Math.max(0, (prev[reviewId] || 1) - 1) }));
   };
 
-  const submitComment = async (reviewId, reviewOwnerId) => {
+  const submitComment = async (reviewId: string, reviewOwnerId?: string) => {
     const body = (commentInput[reviewId] || "").trim();
     if (!body) return;
     const dn = user.user_metadata?.display_name || "Someone";
@@ -233,7 +250,7 @@ export default function HottestWaxTab({ user, reviews: ownReviews, addLL, userAv
                 <div style={{ marginTop: 4 }}>
                   <StarDisplay value={r.rating} />
                 </div>
-                {r.topTracks?.length > 0 && (
+                {(r.topTracks?.length ?? 0) > 0 && (
                   <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {r.topTracks.map(t => (
                       <span key={t} style={{ fontSize: 10, color: "#F4C542",

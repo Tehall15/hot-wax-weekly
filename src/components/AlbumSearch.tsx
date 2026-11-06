@@ -1,22 +1,27 @@
 import { useState, useEffect, useRef } from "react";
 import { LOCAL_DB } from "../utils/data";
+import type { Album, SearchFn } from "../types";
 
-export default function AlbumSearch({ onSelect, searchFn }) {
+export default function AlbumSearch({ onSelect, searchFn, placeholder = "Search artist or album…" }: {
+  onSelect: (a: Album) => void;
+  searchFn?: SearchFn;
+  placeholder?: string;
+}) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<Album[]>([]);
   const [open, setOpen] = useState(false);
-  const ref = useRef();
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const h = e => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const search = async (val) => {
+  const search = async (val: string) => {
     setQ(val);
     if (val.length < 2) { setResults([]); setOpen(false); return; }
-    let found = [];
+    let found: Album[] = [];
     if (searchFn) found = await searchFn(val);
     if (!found || found.length === 0) {
       const low = val.toLowerCase();
@@ -32,7 +37,7 @@ export default function AlbumSearch({ onSelect, searchFn }) {
     <div ref={ref} style={{ position: "relative", width: "100%" }}>
       <input value={q} onChange={e => search(e.target.value)}
         onFocus={() => q.length >= 2 && setOpen(true)}
-        placeholder="Search artist or album…"
+        placeholder={placeholder}
         style={{ width: "100%", background: "#1a1a2e", border: "1px solid #333", borderRadius: 8,
           padding: "10px 14px", color: "#e0e0f0", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
       {open && (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import useSpotify from "./hooks/useSpotify";
 import { EMPTY, buildSlotsFromReviews } from "./utils/slots";
@@ -14,12 +15,19 @@ import HistoryTab from "./tabs/HistoryTab";
 import CollectionTab from "./tabs/CollectionTab";
 import HottestWaxTab from "./tabs/HottestWaxTab";
 import ListenLaterTab from "./tabs/ListenLaterTab";
+import type {
+  Album, AppNotification, ListenLaterItem, Review, Slot, SlotField, Top4, Top4Item,
+} from "./types";
 
-function slugify(name) {
+type TabId = "review" | "hottest" | "collection" | "listen" | "history";
+type Which = "all" | "year";
+type SlotValue = Album | number | string | string[] | null;
+
+function slugify(name: string | undefined) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
 }
 
-function RecordIcon({ count, onClick }) {
+function RecordIcon({ count, onClick }: { count: number; onClick: () => void }) {
   return (
     <button onClick={onClick} style={{ position: "relative", background: "none", border: "none",
       cursor: "pointer", padding: 0, lineHeight: 1, display: "flex", flexDirection: "column",
@@ -41,22 +49,22 @@ function RecordIcon({ count, onClick }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("hottest");
-  const [reviews, setReviews] = useState([]);
-  const [listenLater, setListenLater] = useState([]);
-  const [top4All, setTop4All] = useState([null, null, null, null]);
-  const [top4Year, setTop4Year] = useState([null, null, null, null]);
-  const [slots, setSlots] = useState(EMPTY);
+  const [tab, setTab] = useState<TabId>("hottest");
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [listenLater, setListenLater] = useState<ListenLaterItem[]>([]);
+  const [top4All, setTop4All] = useState<Top4>([null, null, null, null]);
+  const [top4Year, setTop4Year] = useState<Top4>([null, null, null, null]);
+  const [slots, setSlots] = useState<Slot[]>(EMPTY);
   const [weekKey, setWeekKey] = useState(getWeekKey);
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
-  const [editTop4, setEditTop4] = useState(null);
-  const [user, setUser] = useState(null);
+  const [editTop4, setEditTop4] = useState<Which | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
-  const [notifications, setNotifications] = useState([]);
-  const [notifFeed, setNotifFeed] = useState([]); // full panel feed — survives mark-as-read
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifFeed, setNotifFeed] = useState<AppNotification[]>([]); // full panel feed — survives mark-as-read
   const [panelOpen, setPanelOpen] = useState(false);
-  const [avatar, setAvatar] = useState(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
@@ -116,19 +124,20 @@ export default function App() {
         if (data?.data?.avatar) setAvatar(data.data.avatar);
         if (!data?.data?.reviews?.length) return;
         const d = data.data;
-        setReviews(d.reviews);
+        setReviews(d.reviews!);
         if (d.listenLater?.length) setListenLater(d.listenLater);
         // Migrate top4: old format stores review ID strings, new format stores album objects
-        const migrateTop4 = (arr) => (arr || [null,null,null,null]).map(item => {
-          if (!item || typeof item === "object") return item;
-          const r = d.reviews.find(x => x.id === item);
+        const migrateTop4 = (arr: (Top4Item | string)[] | undefined): Top4 => (arr || [null,null,null,null]).map((item): Top4Item => {
+          if (!item) return null;
+          if (typeof item === "object") return item;
+          const r = d.reviews!.find((x: Review) => x.id === item);
           return r ? { artist: r.artist, album: r.album, image: r.image || null, spotifyId: r.spotifyId || null } : null;
         });
         if (d.top4All) setTop4All(migrateTop4(d.top4All));
         if (d.top4Year) setTop4Year(migrateTop4(d.top4Year));
-        setSlots(buildSlotsFromReviews(d.reviews, getWeekKey()));
-      })
-      .catch(err => { if (!cancelled) console.error("[hydration failed]", err); });
+        setSlots(buildSlotsFromReviews(d.reviews!, getWeekKey()));
+      }
+      , err => { if (!cancelled) console.error("[hydration failed]", err); });
 
     return () => { cancelled = true; };
   }, [user]);
@@ -143,7 +152,7 @@ export default function App() {
       .order("created_at", { ascending: false })
       .limit(50)
       .then(({ data }) => {
-        const all = data || [];
+        const all: AppNotification[] = data || [];
         setNotifFeed(all);
         setNotifications(all.filter(n => !n.read));
       });
@@ -153,16 +162,17 @@ export default function App() {
         event: "INSERT", schema: "public", table: "notifications",
         filter: `user_id=eq.${user.id}`,
       }, payload => {
-        setNotifications(prev => [payload.new, ...prev]);
-        setNotifFeed(prev => [payload.new, ...prev].slice(0, 50));
+        const n = payload.new as AppNotification;
+        setNotifications(prev => [n, ...prev]);
+        setNotifFeed(prev => [n, ...prev].slice(0, 50));
       })
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const markNotificationsRead = async () => {
-    if (notifications.length === 0) return;
+    if (!user || notifications.length === 0) return;
     await supabase.from("notifications")
       .update({ read: true })
       .eq("user_id", user.id)
@@ -177,17 +187,16 @@ export default function App() {
     const dn = user.user_metadata?.display_name || null;
     supabase.from("app_data")
       .upsert({ id: user.id, display_name: dn, data: { reviews: r, listenLater: ll, top4All: t4a, top4Year: t4y, avatar: av } })
-      .then(res => { if (res.error) console.error("[persist error]", res.error); })
-      .catch(console.error);
+      .then(res => { if (res.error) console.error("[persist error]", res.error); }, console.error);
   };
 
-  const updateAvatar = (val) => {
+  const updateAvatar = (val: string | null) => {
     setAvatar(val);
     persist(reviews, listenLater, top4All, top4Year, val);
     setAvatarPickerOpen(false);
   };
 
-  const shiftWeek = (days) => {
+  const shiftWeek = (days: number) => {
     const d = new Date(weekKey);
     d.setDate(d.getDate() + days);
     const newKey = d.toISOString().split("T")[0];
@@ -201,7 +210,7 @@ export default function App() {
     setSlots(buildSlotsFromReviews(reviews, newKey));
   };
 
-  const updateSlot = (id, field, val) =>
+  const updateSlot = (id: string, field: SlotField, val: SlotValue) =>
     setSlots(prev => prev.map(s => s.id === id ? { ...s, [field]: val } : s));
 
   const rollRS = async () => {
@@ -226,7 +235,7 @@ export default function App() {
   const submit = () => {
     const done = slots.filter(s => s.album && s.rating > 0);
     if (!done.length) return;
-    const entries = done.map(s => ({
+    const entries: Review[] = done.flatMap(s => s.album ? [{
       id: `${weekKey}-${s.id}-${Date.now() + Math.random()}`,
       weekKey, type: s.type,
       artist: s.album.artist, album: s.album.album, year: s.album.year,
@@ -234,9 +243,9 @@ export default function App() {
       rating: s.rating, topTracks: s.topTracks || [], notes: s.notes,
       reviewedAt: new Date().toISOString(),
       rs500Rank: s.type === "rs500"
-        ? (s.album.rs500Rank || RS500.find(r => r.album === s.album.album)?.rank || null)
+        ? (s.album.rs500Rank || RS500.find(r => r.album === s.album?.album)?.rank || null)
         : null,
-    }));
+    }] : []);
     const filtered = reviews.filter(
       r => !(r.weekKey === weekKey && entries.some(e => e.type === r.type))
     );
@@ -246,27 +255,27 @@ export default function App() {
     setTab("collection");
   };
 
-  const del = (id) => {
+  const del = (id: string) => {
     const updated = reviews.filter(r => r.id !== id);
     setReviews(updated);
     persist(updated);
   };
 
-  const addLL = (album) => {
+  const addLL = (album: Album) => {
     if (listenLater.find(a => a.album === album.album && a.artist === album.artist)) return;
     const updated = [...listenLater, { ...album, addedAt: new Date().toISOString() }];
     setListenLater(updated);
     persist(reviews, updated);
   };
 
-  const removeLL = (idx) => {
+  const removeLL = (idx: number) => {
     const updated = listenLater.filter((_, i) => i !== idx);
     setListenLater(updated);
     persist(reviews, updated);
   };
 
-  const addPastReview = (album, rating, topTracks, notes) => {
-    const entry = {
+  const addPastReview = (album: Album, rating: number, topTracks: string[], notes: string) => {
+    const entry: Review = {
       id: `past-${Date.now()}-${Math.random()}`,
       weekKey, type: "past",
       artist: album.artist, album: album.album, year: album.year || null,
@@ -280,14 +289,14 @@ export default function App() {
     persist(updated);
   };
 
-  const pushToReview = (album, llIdx) => {
+  const pushToReview = (album: Album, llIdx: number) => {
     const emptySlot = slots.find(s => !s.album);
     if (emptySlot) updateSlot(emptySlot.id, "album", album);
     removeLL(llIdx);
     setTab("review");
   };
 
-  const swapTop = (which, fromIdx, toIdx) => {
+  const swapTop = (which: Which, fromIdx: number, toIdx: number) => {
     if (which === "all") {
       const updated = [...top4All];
       [updated[fromIdx], updated[toIdx]] = [updated[toIdx], updated[fromIdx]];
@@ -301,7 +310,7 @@ export default function App() {
     }
   };
 
-  const updateTop = (which, idx, albumObj) => {
+  const updateTop = (which: Which, idx: number, albumObj: Album | null) => {
     if (which === "all") {
       const updated = [...top4All];
       updated[idx] = albumObj; // album object { artist, album, image, spotifyId } or null to clear
@@ -333,9 +342,8 @@ export default function App() {
     supabase.from("app_data")
       .update({ display_name: trimmed })
       .eq("id", user.id)
-      .then(res => { if (res.error) console.error("[display_name sync error]", res.error); })
-      .catch(console.error);
-    setUser(prev => ({ ...prev, user_metadata: { ...prev.user_metadata, display_name: trimmed } }));
+      .then(res => { if (res.error) console.error("[display_name sync error]", res.error); }, console.error);
+    setUser(prev => prev && ({ ...prev, user_metadata: { ...prev.user_metadata, display_name: trimmed } }));
     setEditingName(false);
   };
 
@@ -343,14 +351,14 @@ export default function App() {
     app:    { background: "#0d0d1a", minHeight: "100vh", color: "#e0e0f0", fontFamily: "Georgia,serif",
               maxWidth: 720, margin: "0 auto", padding: "0 14px 90px" },
     tabBar: { display: "flex", gap: 3, marginTop: 20, background: "#0a0a18", borderRadius: 12, padding: 3 },
-    tab:    a => ({ flex: 1, padding: "8px 0", background: a ? "#1a1a30" : "transparent",
+    tab:    (a: boolean) => ({ flex: 1, padding: "8px 0", background: a ? "#1a1a30" : "transparent",
       border: a ? "1px solid #2a2a4a" : "1px solid transparent",
       borderRadius: 8, color: a ? "#e0e0f0" : "#555", fontSize: 12, cursor: "pointer" }),
   };
 
   const completed = slots.filter(s => s.album && s.rating > 0).length;
 
-  const tabs = [
+  const tabs: [TabId, string][] = [
     ["review",      "This Week"],
     ["hottest",     "Hottest Wax"],
     ["collection",  "Record Collection"],

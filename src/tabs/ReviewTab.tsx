@@ -1,17 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import SlotCard from "../components/SlotCard";
 import AlbumSearch from "../components/AlbumSearch";
 import TrackPicker from "../components/TrackPicker";
 import { AlbumArt, StarRating, Btn } from "../components/ui";
+import type { SpotifyApi } from "../hooks/useSpotify";
+import type { Album, Slot, SlotField, Track } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+type PastSaveFn = (album: Album, rating: number, topTracks: string[], notes: string) => void;
 
-function PastReviewCard({ sp, onSave }) {
-  const [album, setAlbum] = useState(null);
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+
+function PastReviewCard({ sp, onSave }: { sp: SpotifyApi; onSave: PastSaveFn }) {
+  const [album, setAlbum] = useState<Album | null>(null);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
-  const [tracks, setTracks] = useState([]);
-  const [topTracks, setTopTracks] = useState([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [topTracks, setTopTracks] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ function PastReviewCard({ sp, onSave }) {
         Past Review
       </div>
 
-      <AlbumSearch searchFn={sp?.token ? sp.searchAlbums : null}
+      <AlbumSearch searchFn={sp?.token ? sp.searchAlbums : undefined}
         onSelect={a => { setAlbum(a); setRating(0); setNotes(""); setTopTracks([]); setTracks([]); }} />
 
       {album && (
@@ -84,7 +88,18 @@ function PastReviewCard({ sp, onSave }) {
   );
 }
 
-export default function ReviewTab({ slots, weekKey, shiftWeek, resetWeek, updateSlot, rollRS, sp, completed, submit, onSavePast }) {
+export default function ReviewTab({ slots, weekKey, shiftWeek, resetWeek, updateSlot, rollRS, sp, completed, submit, onSavePast }: {
+  slots: Slot[];
+  weekKey: string;
+  shiftWeek: (days: number) => void;
+  resetWeek: () => void;
+  updateSlot: (id: string, field: SlotField, value: Album | number | string | string[] | null) => void;
+  rollRS: () => void;
+  sp: SpotifyApi;
+  completed: number;
+  submit: () => void;
+  onSavePast: PastSaveFn;
+}) {
   return (
     <div>
       <div style={{ ...card, background: "#0e0e20", display: "flex", justifyContent: "space-between" }}>
@@ -114,13 +129,13 @@ export default function ReviewTab({ slots, weekKey, shiftWeek, resetWeek, update
 
       <SlotCard slot={slots[0]} label="Contemporary 1" badge="New" color="#4ECDC4"
         updateSlot={(f, v) => updateSlot("c1", f, v)}
-        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : null} />
+        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : undefined} />
       <SlotCard slot={slots[1]} label="Contemporary 2" badge="New" color="#45B7D1"
         updateSlot={(f, v) => updateSlot("c2", f, v)}
-        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : null} />
+        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : undefined} />
       <SlotCard slot={slots[2]} label="Classic Pick" badge="Classic" color="#F4C542"
         updateSlot={(f, v) => updateSlot("rs", f, v)} rollRS={rollRS}
-        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : null} />
+        getTracklist={sp.getTracklist} searchFn={sp.token ? sp.searchAlbums : undefined} />
 
       {completed > 0 && (
         <Btn onClick={submit} variant="primary"

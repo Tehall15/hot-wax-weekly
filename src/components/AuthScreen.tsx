@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function AuthScreen() {
@@ -7,7 +7,7 @@ export default function AuthScreen() {
   const [name, setName] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
   const handleAuth = async () => {
@@ -41,7 +41,7 @@ export default function AuthScreen() {
     setLoading(false);
   };
 
-  const inputStyle = {
+  const inputStyle: CSSProperties = {
     width: "100%", marginBottom: 10, padding: "10px 12px", boxSizing: "border-box",
     background: "#1a1a2e", border: "1px solid #2a2a4e", borderRadius: 8,
     color: "#e0e0f0", fontSize: 14, outline: "none",

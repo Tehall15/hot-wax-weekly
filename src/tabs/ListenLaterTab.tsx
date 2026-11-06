@@ -1,13 +1,22 @@
 import { AlbumArt } from "../components/ui";
+import type { CSSProperties } from "react";
 import AlbumSearch from "../components/AlbumSearch";
+import type { SpotifyApi } from "../hooks/useSpotify";
+import type { Album, ListenLaterItem } from "../types";
 
-const card = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
+const card: CSSProperties = { background: "#111122", border: "1px solid #1e1e3e", borderRadius: 12, padding: 18, marginTop: 14 };
 
-export default function ListenLaterTab({ listenLater, addLL, removeLL, sp, onMoveToReview }) {
+export default function ListenLaterTab({ listenLater, addLL, removeLL, sp, onMoveToReview }: {
+  listenLater: ListenLaterItem[];
+  addLL: (album: Album) => void;
+  removeLL: (idx: number) => void;
+  sp: SpotifyApi;
+  onMoveToReview: (album: Album, idx: number) => void;
+}) {
   return (
     <div>
       <div style={{ ...card, background: "#0e0e20" }}>
-        <AlbumSearch searchFn={sp.token ? sp.searchAlbums : null} onSelect={addLL} />
+        <AlbumSearch searchFn={sp.token ? sp.searchAlbums : undefined} onSelect={addLL} />
       </div>
       {listenLater.length === 0
         ? <div style={{ ...card, textAlign: "center", padding: 40, color: "#555" }}>

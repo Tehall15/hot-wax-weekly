@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import AvatarDisplay from "./AvatarDisplay";
+import type { User } from "@supabase/supabase-js";
+import type { Album, AppNotification, ProfileRow } from "../types";
 
-function slugify(name) {
+function slugify(name?: string | null) {
   return name?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "";
 }
 
-function timeAgo(ts) {
+function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
   const m = Math.floor(diff / 60000);
   const h = Math.floor(diff / 3600000);
@@ -18,9 +20,17 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-export default function FriendsPanel({ user, notifications, notifFeed, onClose, onNotificationsRead, addLL, addToThisWeek }) {
-  const [following, setFollowing] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
+export default function FriendsPanel({ user, notifications, notifFeed, onClose, onNotificationsRead, addLL, addToThisWeek }: {
+  user: User | null;
+  notifications: AppNotification[];
+  notifFeed: AppNotification[];
+  onClose: () => void;
+  onNotificationsRead: () => void;
+  addLL: (album: Album) => void;
+  addToThisWeek: (album: Album) => void;
+}) {
+  const [following, setFollowing] = useState<string[]>([]);
+  const [allUsers, setAllUsers] = useState<ProfileRow[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState(notifications.length > 0 ? "notifications" : "friends");
@@ -41,7 +51,8 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
       });
   }, [user]);
 
-  const follow = async (targetId) => {
+  const follow = async (targetId: string) => {
+    if (!user) return;
     await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
     const myName = user.user_metadata?.display_name || "Someone";
     await supabase.from("notifications").insert({
@@ -51,17 +62,18 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
     setFollowing(prev => [...prev, targetId]);
   };
 
-  const unfollow = async (targetId) => {
+  const unfollow = async (targetId: string) => {
+    if (!user) return;
     await supabase.from("follows").delete()
       .eq("follower_id", user.id).eq("following_id", targetId);
     setFollowing(prev => prev.filter(id => id !== targetId));
   };
 
   const filteredUsers = allUsers.filter(u =>
-    u.display_name.toLowerCase().includes(search.toLowerCase())
+    u.display_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const notifText = (n) => {
+  const notifText = (n: AppNotification) => {
     const name = <span style={{ color: "#F4C542", fontWeight: 600 }}>{n.from_display_name}</span>;
     if (n.type === "follow") return <>{name} started following you</>;
     if (n.type === "reaction") return <>{name} reacted to your review</>;
@@ -125,16 +137,16 @@ export default function FriendsPanel({ user, notifications, notifFeed, onClose, 
                     borderLeft: n.read ? "2px solid transparent" : "2px solid #e53935",
                   }}>
                     <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5 }}>{notifText(n)}</div>
-                    <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{timeAgo(n.created_at)}</div>
+                    <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{timeAgo(n.created_at ?? "")}</div>
                     {n.type === "recommendation" && n.metadata?.album && (
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                        <button onClick={() => { addToThisWeek(n.metadata.album); onClose(); }}
+                        <button onClick={() => { addToThisWeek(n.metadata!.album!); onClose(); }}
                           style={{ background: "#F4C542", border: "none", borderRadius: 6,
                             padding: "5px 10px", fontSize: 11, fontWeight: 700,
                             color: "#0d0d1a", cursor: "pointer" }}>
                           + This Week
                         </button>
-                        <button onClick={() => addLL(n.metadata.album)}
+                        <button onClick={() => addLL(n.metadata!.album!)}
                           style={{ background: "transparent", border: "1px solid #2a2a4e",
                             borderRadius: 6, padding: "5px 10px", fontSize: 11,
                             color: "#aaa", cursor: "pointer" }}>
