@@ -1,4 +1,9 @@
-import styles from "./AvatarDisplay.module.css";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface Props {
   avatar?: string | null;
@@ -20,23 +25,29 @@ export default function AvatarDisplay({
   const isEmoji = avatar && !isImage;
 
   return (
-    <div
+    <Avatar
       onClick={onClick}
-      className={`${styles.avatar} ${muted ? styles.muted : ""} ${onClick ? styles.clickable : ""}`}
+      className={cn(
+        "overflow-hidden rounded-full after:border-transparent",
+        muted ? "bg-muted" : "bg-secondary",
+        onClick && "cursor-pointer after:border-border",
+      )}
       style={{ width: size, height: size }}
     >
-      {isImage ? (
-        <img src={avatar} alt="" className={styles.image} />
-      ) : isEmoji ? (
-        <span className={styles.emoji} style={{ fontSize: size * 0.48 }}>{avatar}</span>
-      ) : (
-        <span
-          className={`${styles.initial} ${muted ? styles.mutedInitial : ""}`}
-          style={{ fontSize: size * 0.42 }}
-        >
-          {name?.[0]?.toUpperCase() || "?"}
-        </span>
-      )}
-    </div>
+      {isImage && <AvatarImage src={avatar} alt="" />}
+      <AvatarFallback
+        className={cn(
+          "font-bold",
+          isEmoji
+            ? "bg-transparent text-foreground"
+            : muted
+              ? "bg-muted text-muted-foreground"
+              : "bg-secondary text-primary",
+        )}
+        style={{ fontSize: size * (isEmoji ? 0.48 : 0.42) }}
+      >
+        {isEmoji ? avatar : name?.[0]?.toUpperCase() || "?"}
+      </AvatarFallback>
+    </Avatar>
   );
 }

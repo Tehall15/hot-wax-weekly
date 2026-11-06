@@ -1,5 +1,5 @@
+import { Button } from "@/components/ui/button";
 import type { Album, Review } from "../../types";
-import styles from "./ReactionBar.module.css";
 
 const EMOJIS = ["🔥", "✨", "💿", "😮"];
 
@@ -39,41 +39,45 @@ export default function ReactionBar({
   };
 
   return (
-    <div className={styles.bar}>
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
       {EMOJIS.map((emoji) => {
         const reaction = reactionState?.[emoji];
         const count = reaction?.count || 0;
         const mine = reaction?.mine || false;
         return (
-          <button
+          <Button
             key={emoji}
             onClick={() => onToggleReaction(review.id, emoji, reviewOwnerId)}
-            className={`${styles.reaction} ${mine ? styles.reactionMine : ""}`}
+            variant={mine ? "default" : "outline"}
+            size="sm"
+            className="gap-1 rounded-full px-2 text-xs"
           >
             <span>{emoji}</span>
-            {count > 0 && <span className={styles.count}>{count}</span>}
-          </button>
+            {count > 0 && <span className="text-[10px] font-semibold">{count}</span>}
+          </Button>
         );
       })}
-      <div className={styles.actions}>
+      <div className="ml-auto flex items-center gap-2">
         {!isMe && addLL && (
-          <button className={styles.action} onClick={() => onAddLater(album)}>
+          <Button variant="ghost" size="xs" onClick={() => onAddLater(album)}>
             + Later
-          </button>
+          </Button>
         )}
-        <button
-          className={styles.action}
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={() => onRecommend(album)}
           title="Recommend to a friend"
         >
           ↗ Rec
-        </button>
-        <button
-          className={`${styles.action} ${commentsOpen ? styles.actionOpen : ""}`}
+        </Button>
+        <Button
+          variant={commentsOpen ? "secondary" : "ghost"}
+          size="xs"
           onClick={() => onToggleComments(review.id)}
         >
           💬 {commentCount}
-        </button>
+        </Button>
       </div>
     </div>
   );

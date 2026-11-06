@@ -1,9 +1,7 @@
-import { Btn } from "../../components/ui";
+import { Button } from "@/components/ui/button";
 import SlotCard from "../../components/album/SlotCard";
 import type { SpotifyApi } from "../../hooks/useSpotify";
 import type { Album, Slot, SlotField } from "../../types";
-import shared from "../../styles/shared.module.css";
-import styles from "./ReviewTab.module.css";
 import PastReviewCard, { type PastSaveFn } from "./PastReviewCard";
 
 export default function ReviewTab({
@@ -35,30 +33,31 @@ export default function ReviewTab({
 }) {
   return (
     <div>
-      <div className={`${shared.card} ${styles.weekCard}`}>
+      <div className="mt-4 flex justify-between rounded-xl border border-border bg-card p-4">
         <div>
-          <div className={styles.weekLabel}>Week of</div>
-          <div className={styles.weekDate}>
+          <div className="text-xs text-muted-foreground">Week of</div>
+          <div className="text-[15px] font-bold">
             {new Date(weekKey).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "long",
             })}
           </div>
-          <div className={styles.weekControls}>
-            <button
+          <div className="mt-2 flex gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => shiftWeek(-7)}
-              className={styles.weekButton}
             >
               ← Previous
-            </button>
-            <button onClick={resetWeek} className={styles.weekButton}>
+            </Button>
+            <Button variant="outline" size="sm" onClick={resetWeek}>
               Current
-            </button>
+            </Button>
           </div>
         </div>
-        <div className={styles.completion}>
-          <div className={styles.completionCount}>{completed}/3</div>
-          <div className={styles.completionLabel}>ready</div>
+        <div className="text-right">
+          <div className="text-[26px] font-bold text-primary">{completed}/3</div>
+          <div className="text-[11px] text-muted-foreground">ready</div>
         </div>
       </div>
 
@@ -92,10 +91,10 @@ export default function ReviewTab({
       />
 
       {completed > 0 && (
-        <div className={styles.submitButton}>
-          <Btn onClick={submit} variant="primary">
+        <div className="w-full">
+          <Button onClick={submit} className="mt-5 w-full p-3.5 text-[15px]">
             Save {completed} Review{completed !== 1 ? "s" : ""} →
-          </Btn>
+          </Button>
         </div>
       )}
 

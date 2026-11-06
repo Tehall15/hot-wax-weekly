@@ -1,5 +1,5 @@
 import { useState } from "react";
-import styles from "./StarRating.module.css";
+import { cn } from "@/lib/utils";
 
 export default function StarRating({
   value,
@@ -12,28 +12,31 @@ export default function StarRating({
 }) {
   const [hover, setHover] = useState<number | null>(null);
   return (
-    <div className={styles.row}>
+    <div className="flex items-center gap-px">
       {[...Array(10)].map((_, i) => {
         const v = i + 1;
         const filled = (hover ?? value) >= v;
-        const cls = [
-          styles.star,
-          filled ? styles.filled : "",
-          readonly ? styles.readonly : "",
-        ].join(" ");
         return (
           <button
             key={v}
+            type="button"
             onClick={() => !readonly && onChange?.(v)}
             onMouseEnter={() => !readonly && setHover(v)}
             onMouseLeave={() => !readonly && setHover(null)}
-            className={cls}
+            className={cn(
+              "p-0 text-xl transition-all",
+              filled ? "text-primary" : "text-muted-foreground/30",
+              filled && !readonly && "scale-110",
+              readonly ? "cursor-default" : "cursor-pointer",
+            )}
           >
             ★
           </button>
         );
       })}
-      {value > 0 && <span className={styles.value}>{value}/10</span>}
+      {value > 0 && (
+        <span className="ml-1.5 text-[13px] font-bold text-primary">{value}/10</span>
+      )}
     </div>
   );
 }

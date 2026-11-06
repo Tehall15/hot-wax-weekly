@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { AlbumArt, Btn, Pill, StarRating } from "../ui";
-import shared from "../../styles/shared.module.css";
+import AlbumArt from "@/components/ui/AlbumArt";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import StarRating from "@/components/ui/StarRating";
+import { Textarea } from "@/components/ui/textarea";
 import AlbumSearch from "./AlbumSearch";
 import TrackPicker from "./TrackPicker";
-import styles from "./SlotCard.module.css";
 import type {
   Album,
   SearchFn,
@@ -52,22 +54,24 @@ export default function SlotCard({
 
   return (
     <div
-      className={`${shared.card} ${styles.card}`}
+      className="mt-3.5 rounded-xl border border-border border-l-[3px] bg-card p-4.5"
       style={{ borderLeftColor: color }}
     >
-      <div className={styles.header}>
-        <span className={`${shared.sectionLabel} ${styles.slotLabel}`}>
+      <div className="mb-3 flex justify-between">
+        <span className="text-[11px] tracking-[2px] text-muted-foreground uppercase">
           {label}
         </span>
-        <Pill color={color + "22"}>{badge}</Pill>
+        <Badge variant="outline" style={{ backgroundColor: `${color}22`, color }}>
+          {badge}
+        </Badge>
       </div>
 
       {slot.id === "rs" && !slot.album && (
         <>
-          <div className={styles.randomButton}>
-            <Btn onClick={rollRS} variant="ghost">
+          <div className="mb-2 flex">
+            <Button onClick={rollRS} variant="ghost" className="w-full justify-start whitespace-normal text-left">
               🎲 Random pick from Rolling Stone's 500 Greatest Albums
-            </Btn>
+            </Button>
           </div>
           <AlbumSearch
             searchFn={searchFn}
@@ -77,39 +81,42 @@ export default function SlotCard({
       )}
 
       {slot.id === "rs" && slot.album && (
-        <div className={styles.selectedAlbum}>
+        <div className="mb-3 flex gap-2.5">
           <AlbumArt src={slot.album.image} size={44} />
-          <div className={styles.albumDetails}>
-            <div className={styles.randomAlbumName}>{slot.album.album}</div>
-            <div className={styles.artistName}>{slot.album.artist}</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold">{slot.album.album}</div>
+            <div className="text-xs text-muted-foreground">{slot.album.artist}</div>
           </div>
-          <div className={styles.rollButton}>
-            <Btn onClick={rollRS} variant="ghost">
+          <div className="flex">
+            <Button onClick={rollRS} variant="ghost" size="sm" className="px-2.5 text-[11px]">
               🎲
-            </Btn>
+            </Button>
           </div>
         </div>
       )}
 
       {slot.id !== "rs" && (
-        <div className={styles.albumSection}>
+        <div className="mb-3">
           <AlbumSearch
             searchFn={searchFn}
             onSelect={(a) => updateSlot("album", a)}
           />
           {slot.album && (
-            <div className={styles.albumPreview}>
+            <div className="mt-2 flex gap-2.5 rounded-lg bg-muted p-2">
               <AlbumArt src={slot.album.image} size={40} />
-              <div className={styles.albumDetails}>
-                <div className={styles.previewAlbumName}>{slot.album.album}</div>
-                <div className={styles.artistName}>{slot.album.artist}</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">{slot.album.album}</div>
+                <div className="text-xs text-muted-foreground">{slot.album.artist}</div>
               </div>
-              <button
+              <Button
                 onClick={() => updateSlot("album", null)}
-                className={styles.clearAlbum}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Clear selected album"
+                className="text-muted-foreground"
               >
                 ×
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -117,8 +124,8 @@ export default function SlotCard({
 
       {slot.album && (
         <>
-          <div className={styles.ratingSection}>
-            <div className={`${shared.sectionLabel} ${styles.ratingLabel}`}>
+          <div className="mb-3.5">
+            <div className="mb-2 text-[11px] tracking-[2px] text-muted-foreground uppercase">
               Rating
             </div>
             <StarRating
@@ -126,7 +133,7 @@ export default function SlotCard({
               onChange={(v) => updateSlot("rating", v)}
             />
           </div>
-          <div className={styles.tracksSection}>
+          <div className="mb-3.5">
             <TrackPicker
               tracks={tracks}
               selectedTracks={slot.topTracks || []}
@@ -134,14 +141,14 @@ export default function SlotCard({
             />
           </div>
           <div>
-            <div className={`${shared.sectionLabel} ${styles.notesLabel}`}>
+            <div className="mb-1.5 text-[11px] tracking-[2px] text-muted-foreground uppercase">
               Notes
             </div>
-            <textarea
+            <Textarea
               value={slot.notes || ""}
               onChange={(e) => updateSlot("notes", e.target.value)}
               placeholder="Thoughts…"
-              className={styles.notes}
+              className="h-[68px] min-h-0 resize-none px-3 py-2 text-[13px]"
             />
           </div>
         </>

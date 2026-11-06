@@ -1,12 +1,12 @@
 import type { Album, ReviewComment } from "../../types";
-import { AlbumArt } from "../../components/ui";
+import AlbumArt from "@/components/ui/AlbumArt";
+import { cn } from "@/lib/utils";
 import AvatarDisplay from "../../components/avatar/AvatarDisplay";
 import { slugify } from "../../utils/format";
 import CommentsSection from "./CommentsSection";
 import RatingBadge from "./RatingBadge";
 import ReactionBar from "./ReactionBar";
 import type { FeedItem, ReactionMap } from "./types";
-import styles from "./FeedItemCard.module.css";
 
 interface Props {
   item: FeedItem;
@@ -48,19 +48,22 @@ export default function FeedItemCard({
   const { review, displayName, userId: ownerId, isMe, avatar } = item;
 
   return (
-    <div className={`${styles.item} ${isLast ? styles.lastItem : ""}`}>
-      <div className={styles.header}>
+    <div className={cn("border-b border-border py-3.5", isLast && "border-b-0")}>
+      <div className="mb-2.5 flex items-center gap-2">
         <AvatarDisplay avatar={avatar} name={displayName} size={28} muted={isMe} />
-        <div className={styles.reviewer}>
+        <div className="min-w-0 flex-1">
           {isMe ? (
-            <span className={styles.you}>You</span>
+            <span className="text-xs font-semibold text-muted-foreground">You</span>
           ) : (
-            <a href={`/u/${slugify(displayName)}`} className={styles.profileLink}>
+            <a
+              href={`/u/${slugify(displayName)}`}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
               {displayName}
             </a>
           )}
         </div>
-        <div className={styles.date}>
+        <div className="shrink-0 text-[10px] text-muted-foreground/60">
           {new Date(review.reviewedAt).toLocaleDateString("en-GB", {
             day: "numeric",
             month: "short",
@@ -68,29 +71,36 @@ export default function FeedItemCard({
         </div>
       </div>
 
-      <div className={styles.content}>
+      <div className="flex items-start gap-3">
         <AlbumArt src={review.image} size={52} muted />
-        <div className={styles.details}>
-          <div className={styles.albumDetails}>
-            <div className={styles.album}>{review.album}</div>
-            <div className={styles.artist}>
+        <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-bold">{review.album}</div>
+            <div className="text-xs text-muted-foreground">
               {review.artist}
-              {review.year ? <span className={styles.year}> · {review.year}</span> : null}
+              {review.year ? <span className="text-muted-foreground/70"> · {review.year}</span> : null}
             </div>
           </div>
-          <div className={styles.rating}>
+          <div className="mt-1">
             <RatingBadge value={review.rating} />
           </div>
           {(review.topTracks?.length ?? 0) > 0 && (
-            <div className={styles.tracks}>
+            <div className="mt-1.5 flex flex-wrap gap-1">
               {review.topTracks.map((track) => (
-                <span key={track} className={styles.track}>
+                <span
+                  key={track}
+                  className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary"
+                >
                   ★ {track}
                 </span>
               ))}
             </div>
           )}
-          {review.notes && <div className={styles.notes}>"{review.notes}"</div>}
+          {review.notes && (
+            <div className="mt-1.5 text-xs italic leading-relaxed text-muted-foreground">
+              "{review.notes}"
+            </div>
+          )}
 
           <ReactionBar
             review={review}
@@ -122,4 +132,3 @@ export default function FeedItemCard({
     </div>
   );
 }
-

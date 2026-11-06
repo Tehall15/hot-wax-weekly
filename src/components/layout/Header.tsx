@@ -1,8 +1,9 @@
 import type { KeyboardEvent } from "react";
 import AvatarDisplay from "../avatar/AvatarDisplay";
-import { Btn } from "../ui";
+import { Button } from "../ui/button";
 import RecordIcon from "./RecordIcon";
-import styles from "./Header.module.css";
+import { Input } from "../ui/input";
+import { cn } from "@/lib/utils";
 
 export type HeaderTab = "review" | "hottest" | "collection" | "listen";
 
@@ -63,27 +64,23 @@ export default function Header({
   onTabChange,
 }: Props) {
   return (
-    <header className={styles.header}>
-      <h1 className={styles.title}>🔥 Hot Wax Weekly</h1>
+    <header className="pt-7 text-center">
+      <h1 className="m-0 text-[26px] font-bold">🔥 Hot Wax Weekly</h1>
       {editingName ? (
-        <div className={styles.nameEditor}>
-          <input
+        <div className="mt-1.5 flex items-center justify-center gap-1.5">
+          <Input
             value={nameInput}
             onChange={(event) => onNameInputChange(event.target.value)}
             onKeyDown={onNameKeyDown}
             autoFocus
             placeholder="Your name"
-            className={styles.nameInput}
+            className="h-7 w-40 bg-card text-[13px]"
           />
-          <button onClick={onSaveName} className={styles.saveButton}>
-            Save
-          </button>
-          <button onClick={onCancelNameEdit} className={styles.cancelButton}>
-            ×
-          </button>
+          <Button size="xs" onClick={onSaveName}>Save</Button>
+          <Button size="icon-xs" variant="ghost" onClick={onCancelNameEdit} aria-label="Cancel editing name">×</Button>
         </div>
       ) : (
-        <div className={styles.profileRow}>
+        <div className="mt-1.5 flex items-center justify-center gap-2">
           <AvatarDisplay
             avatar={avatar}
             name={displayName}
@@ -91,65 +88,69 @@ export default function Header({
             onClick={onAvatarClick}
             muted
           />
-          <p className={styles.journalLabel}>
+          <p className="m-0 text-xs italic text-muted-foreground">
             {journalLabel}
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={onEditName}
-              className={styles.editNameButton}
+              aria-label="Edit name"
+              className="ml-1.5 text-muted-foreground"
             >
               ✎
-            </button>
+            </Button>
           </p>
         </div>
       )}
-      <div className={styles.actionRow}>
+      <div className="mt-2.5 flex items-center justify-center gap-6">
         <RecordIcon count={notificationCount} onClick={onOpenFriends} />
         {profileUrl && (
-          <button
+          <Button
+            variant="ghost"
             onClick={onShareProfile}
             title={profileUrl}
-            className={styles.actionButton}
+            className="h-auto flex-col gap-0.5 p-0"
           >
-            <span className={styles.actionIcon}>🎤</span>
-            <span className={styles.actionLabel}>Share profile</span>
-          </button>
+            <span className="text-xl leading-none">🎤</span>
+            <span className="text-[9px] tracking-wide text-muted-foreground">Share profile</span>
+          </Button>
         )}
-        <button onClick={onSignOut} className={styles.actionButton}>
-          <span className={styles.actionIcon}>🤘</span>
-          <span className={styles.actionLabel}>Sign out</span>
-        </button>
+        <Button variant="ghost" onClick={onSignOut} className="h-auto flex-col gap-0.5 p-0">
+          <span className="text-xl leading-none">🤘</span>
+          <span className="text-[9px] tracking-wide text-muted-foreground">Sign out</span>
+        </Button>
       </div>
-      <div className={styles.spotifyRow}>
+      <div className="mt-2 flex justify-center gap-2.5">
         {spotifyConnected ? (
-          <span className={styles.spotifyConnected}>● Spotify connected</span>
+          <span className="text-[11px] text-spotify">● Spotify connected</span>
         ) : spotifyExpired ? (
-          <div className={styles.spotifyExpired}>
-            <span className={styles.spotifyDisconnected}>
-              ● Spotify disconnected
-            </span>
-            <div className={styles.spotifyReconnectButton}>
-              <Btn onClick={onSpotifyReconnect} variant="spotify">
-                Reconnect
-              </Btn>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-destructive">● Spotify disconnected</span>
+            <Button onClick={onSpotifyReconnect} variant="spotify" size="xs">
+              Reconnect
+            </Button>
           </div>
         ) : (
-          <div className={styles.spotifyConnectButton}>
-            <Btn onClick={onSpotifyLogin} variant="spotify">
-              Connect Spotify
-            </Btn>
-          </div>
+          <Button onClick={onSpotifyLogin} variant="spotify" size="xs">
+            Connect Spotify
+          </Button>
         )}
       </div>
-      <div className={styles.tabBar}>
+      <div className="mt-5 flex gap-[3px] rounded-xl bg-muted p-[3px]" role="group" aria-label="Main navigation">
         {tabs.map(([id, label]) => (
-          <button
+          <Button
             key={id}
-            className={`${styles.tab} ${selectedTab === id ? styles.activeTab : ""}`}
+            type="button"
+            variant="ghost"
+            aria-pressed={selectedTab === id}
+            className={cn(
+              "h-auto min-w-0 flex-1 shrink whitespace-normal px-1 py-2 text-xs text-muted-foreground",
+              selectedTab === id && "border-border bg-accent text-foreground",
+            )}
             onClick={() => onTabChange(id)}
           >
             {label}
-          </button>
+          </Button>
         ))}
       </div>
     </header>

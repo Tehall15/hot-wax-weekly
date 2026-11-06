@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
 import { LOCAL_DB } from "../../utils/data";
 import type { Album, SearchFn } from "../../types";
-import styles from "./AlbumSearch.module.css";
 
 export default function AlbumSearch({
   onSelect,
@@ -47,16 +47,16 @@ export default function AlbumSearch({
   };
 
   return (
-    <div ref={ref} className={styles.root}>
-      <input
+    <div ref={ref} className="relative w-full">
+      <Input
         value={q}
         onChange={(e) => search(e.target.value)}
         onFocus={() => q.length >= 2 && setOpen(true)}
         placeholder={placeholder}
-        className={styles.input}
+        className="h-auto box-border px-3.5 py-2.5 text-sm"
       />
       {open && (
-        <div className={styles.results}>
+        <div className="absolute top-full right-0 left-0 z-[200] mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-border bg-card shadow-xl">
           {results.map((r, i) => (
             <div
               key={i}
@@ -65,14 +65,14 @@ export default function AlbumSearch({
                 setQ("");
                 setOpen(false);
               }}
-              className={styles.result}
+              className="flex cursor-pointer items-center gap-2.5 border-b border-muted px-3.5 py-2.5 last:border-b-0 hover:bg-accent"
             >
               {r.image && (
-                <img src={r.image} alt="" className={styles.image} />
+                <img src={r.image} alt="" className="size-9 rounded-sm object-cover" />
               )}
               <div>
-                <div className={styles.albumName}>{r.album}</div>
-                <div className={styles.artistName}>
+                <div className="text-sm font-semibold text-foreground">{r.album}</div>
+                <div className="text-xs text-muted-foreground">
                   {r.artist} · {r.year}
                 </div>
               </div>

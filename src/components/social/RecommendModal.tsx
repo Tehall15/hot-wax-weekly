@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import AvatarDisplay from "../avatar/AvatarDisplay";
-import { Modal } from "../ui";
-import styles from "./RecommendModal.module.css";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
 import type { Album, AppDataRow } from "../../types";
 
@@ -66,47 +71,52 @@ export default function RecommendModal({
   };
 
   return (
-    <Modal title="Recommend to…" onClose={onClose} variant="dialog" width={300} headerGap={4}>
-        <div className={styles.albumSubtitle}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-[300px] max-w-[calc(100%-2rem)] gap-4">
+        <DialogHeader className="pr-6">
+          <DialogTitle>Recommend to…</DialogTitle>
+        </DialogHeader>
+        <div className="mb-1 truncate text-xs text-muted-foreground">
           {album.album} — {album.artist}
         </div>
 
         {loading ? (
-          <div className={styles.centeredMessage}>
+          <div className="py-5 text-center text-sm text-muted-foreground">
             Loading…
           </div>
         ) : following.length === 0 ? (
-          <div className={styles.centeredMessage}>
+          <div className="py-5 text-center text-sm text-muted-foreground">
             Follow some bandmates first
           </div>
         ) : (
-          <div className={styles.followingList}>
-            {following.map((u) => (
-              <div
-                key={u.id}
-                className={styles.followingRow}
-              >
-                <AvatarDisplay
-                  avatar={u.data?.avatar}
-                  name={u.display_name}
-                  size={32}
-                />
-                <span
-                  className={styles.displayName}
-                >
-                  {u.display_name}
-                </span>
-                <button
-                  onClick={() => send(u)}
-                  disabled={sent.has(u.id)}
-                  className={`${styles.sendButton} ${sent.has(u.id) ? styles.sent : ""}`}
-                >
-                  {sent.has(u.id) ? "Sent ✓" : "Send"}
-                </button>
-              </div>
-            ))}
+          <div className="flex flex-col gap-2.5">
+            {following.map((u) => {
+              const hasSent = sent.has(u.id);
+              return (
+                <div key={u.id} className="flex items-center gap-2.5">
+                  <AvatarDisplay
+                    avatar={u.data?.avatar}
+                    name={u.display_name}
+                    size={32}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                    {u.display_name}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={hasSent ? "outline" : "default"}
+                    className="shrink-0"
+                    onClick={() => send(u)}
+                    disabled={hasSent}
+                  >
+                    {hasSent ? "Sent ✓" : "Send"}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

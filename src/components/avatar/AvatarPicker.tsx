@@ -2,8 +2,14 @@ import { useState, useRef, type ChangeEvent } from "react";
 import AlbumSearch from "../album/AlbumSearch";
 import AvatarDisplay from "./AvatarDisplay";
 import type { SpotifyApi } from "../../hooks/useSpotify";
-import { Modal } from "../ui";
-import styles from "./AvatarPicker.module.css";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EMOJIS = [
   "🎵",
@@ -96,49 +102,40 @@ export default function AvatarPicker({
   };
 
   return (
-    <Modal title="Set your avatar" onClose={onClose} variant="dialog" width={320} headerGap={16}>
-        {/* Preview */}
-        <div
-          className={styles.preview}
-        >
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-[320px] max-w-[calc(100%-2rem)] gap-4">
+        <DialogHeader className="pr-6">
+          <DialogTitle>Set your avatar</DialogTitle>
+        </DialogHeader>
+
+        <div className="mb-1 flex justify-center">
           <AvatarDisplay avatar={preview} name={displayName} size={72} />
         </div>
 
-        {/* Tabs */}
-        <div
-          className={styles.tabs}
-        >
-          {[
-            ["emoji", "Emoji"],
-            ["album", "Album art"],
-            ["photo", "Photo"],
-          ].map(([id, lbl]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`${styles.tab} ${tab === id ? styles.activeTab : ""}`}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
+        <Tabs value={tab} onValueChange={(value) => value && setTab(value)}>
+          <TabsList className="w-full">
+            <TabsTrigger value="emoji">Emoji</TabsTrigger>
+            <TabsTrigger value="album">Album art</TabsTrigger>
+            <TabsTrigger value="photo">Photo</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Emoji grid */}
         {tab === "emoji" && (
-          <div className={styles.emojiGrid}>
-            {EMOJIS.map((e) => (
-              <button
-                key={e}
-                onClick={() => setPreview(e)}
-                className={`${styles.emoji} ${preview === e ? styles.selectedEmoji : ""}`}
+          <div className="flex flex-wrap gap-1">
+            {EMOJIS.map((emoji) => (
+              <Button
+                key={emoji}
+                variant="ghost"
+                size="icon"
+                className={`size-9 text-xl ${preview === emoji ? "bg-primary/15 ring-1 ring-primary" : ""}`}
+                onClick={() => setPreview(emoji)}
               >
-                {e}
-              </button>
+                {emoji}
+              </Button>
             ))}
           </div>
         )}
 
-        {/* Album art */}
         {tab === "album" && (
           <div>
             {sp?.token ? (
@@ -148,44 +145,38 @@ export default function AvatarPicker({
                 placeholder="Search for an album…"
               />
             ) : (
-              <div
-                className={styles.spotifyMessage}
-              >
+              <div className="py-5 text-center text-xs text-muted-foreground">
                 Connect Spotify to search album art
               </div>
             )}
           </div>
         )}
 
-        {/* Photo upload */}
         {tab === "photo" && (
-          <div className={styles.photoSection}>
+          <div className="py-2.5 text-center">
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
               onChange={handleFile}
-              className={styles.hiddenInput}
+              className="hidden"
             />
-            <button
+            <Button
+              variant="outline"
               onClick={() => fileRef.current?.click()}
-              className={styles.choosePhoto}
             >
               Choose photo
-            </button>
-            <div className={styles.photoHint}>
+            </Button>
+            <div className="mt-2 text-[11px] text-muted-foreground">
               JPG or PNG, cropped to circle
             </div>
           </div>
         )}
 
-        {/* Save */}
-        <button
-          onClick={() => onSave(preview || null)}
-          className={styles.saveButton}
-        >
+        <Button className="mt-1 w-full" onClick={() => onSave(preview || null)}>
           Save avatar
-        </button>
-    </Modal>
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

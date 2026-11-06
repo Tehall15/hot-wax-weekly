@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { AlbumArt, Btn, StarRating } from "../../components/ui";
+import AlbumArt from "@/components/ui/AlbumArt";
+import { Button } from "@/components/ui/button";
+import StarRating from "@/components/ui/StarRating";
+import { Textarea } from "@/components/ui/textarea";
 import AlbumSearch from "../../components/album/AlbumSearch";
 import TrackPicker from "../../components/album/TrackPicker";
 import type { SpotifyApi } from "../../hooks/useSpotify";
 import type { Album, Track } from "../../types";
-import shared from "../../styles/shared.module.css";
-import styles from "./PastReviewCard.module.css";
 
 export type PastSaveFn = (
   album: Album,
@@ -56,8 +57,10 @@ export default function PastReviewCard({
   };
 
   return (
-    <div className={`${shared.card} ${styles.card}`}>
-      <div className={styles.sectionLabel}>Past Review</div>
+    <div className="mt-4 rounded-xl border border-border border-l-[3px] border-l-violet-500 bg-card p-4">
+      <div className="mb-3 text-[11px] uppercase tracking-[2px] text-muted-foreground">
+        Past Review
+      </div>
 
       <AlbumSearch
         searchFn={sp?.token ? sp.searchAlbums : undefined}
@@ -72,27 +75,35 @@ export default function PastReviewCard({
 
       {album && (
         <>
-          <div className={styles.selectedAlbum}>
+          <div className="mb-3.5 mt-2 flex items-center gap-2.5 rounded-lg bg-muted p-2">
             <AlbumArt src={album.image} size={40} />
-            <div className={styles.selectedAlbumDetails}>
-              <div className={styles.selectedAlbumName}>{album.album}</div>
-              <div className={styles.selectedAlbumArtist}>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-semibold">{album.album}</div>
+              <div className="text-xs text-muted-foreground">
                 {album.artist}
                 {album.year ? ` · ${album.year}` : ""}
               </div>
             </div>
-            <button onClick={reset} className={styles.clearButton}>
+            <Button
+              onClick={reset}
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Clear selected album"
+              className="text-muted-foreground"
+            >
               ×
-            </button>
+            </Button>
           </div>
 
-          <div className={styles.ratingSection}>
-            <div className={styles.fieldLabel}>Rating</div>
+          <div className="mb-3.5">
+            <div className="mb-2 text-[11px] uppercase tracking-[2px] text-muted-foreground">
+              Rating
+            </div>
             <StarRating value={rating} onChange={setRating} />
           </div>
 
           {tracks.length > 0 && (
-            <div className={styles.trackSection}>
+            <div className="mb-3.5">
               <TrackPicker
                 tracks={tracks}
                 selectedTracks={topTracks}
@@ -101,20 +112,22 @@ export default function PastReviewCard({
             </div>
           )}
 
-          <div className={styles.notesSection}>
-            <div className={styles.notesLabel}>Notes</div>
-            <textarea
+          <div className="mb-3.5">
+            <div className="mb-1.5 text-[11px] uppercase tracking-[2px] text-muted-foreground">
+              Notes
+            </div>
+            <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Thoughts…"
-              className={styles.notesInput}
+              className="h-[68px] resize-none text-sm"
             />
           </div>
 
-          <div className={styles.saveButton}>
-            <Btn onClick={save} variant="primary" disabled={!rating}>
+          <div className="w-full">
+            <Button onClick={save} disabled={!rating} className="w-full">
               {saved ? "Saved ✓" : "Save Review"}
-            </Btn>
+            </Button>
           </div>
         </>
       )}

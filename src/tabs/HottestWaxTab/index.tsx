@@ -11,8 +11,6 @@ import type {
 import RecommendModal from "../../components/social/RecommendModal";
 import FeedItemCard from "./FeedItemCard";
 import type { FeedItem, ReactionMap } from "./types";
-import shared from "../../styles/shared.module.css";
-import styles from "./index.module.css";
 
 export default function HottestWaxTab({
   user,
@@ -235,7 +233,7 @@ export default function HottestWaxTab({
 
   if (loading && feed.length === 0) {
     return (
-      <div className={`${shared.card} ${styles.emptyCard} ${styles.loading}`}>
+      <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
         Loading…
       </div>
     );
@@ -243,10 +241,10 @@ export default function HottestWaxTab({
 
   if (!loading && feed.length === 0) {
     return (
-      <div className={`${shared.card} ${styles.emptyCard}`}>
-        <div className={styles.emptyIcon}>🎵</div>
-        <div className={styles.emptyTitle}>No reviews yet</div>
-        <div className={styles.emptyHint}>
+      <div className="rounded-xl border border-border bg-card p-10 text-center">
+        <div className="mb-3 text-3xl">🎵</div>
+        <div className="mb-1.5 text-sm text-muted-foreground">No reviews yet</div>
+        <div className="text-xs text-muted-foreground">
           Start with This Week, then find bandmates 💿
         </div>
       </div>
@@ -262,8 +260,8 @@ export default function HottestWaxTab({
           onClose={() => setRecommendAlbum(null)}
         />
       )}
-      <div className={shared.card}>
-        <div className={styles.feedList}>
+      <div className="rounded-xl border border-border bg-card px-4">
+        <div className="flex flex-col">
           {feed.map((item, index) => (
             <FeedItemCard
               key={item.review.id}

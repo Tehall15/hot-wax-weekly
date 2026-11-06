@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { AlbumArt } from "../../components/ui";
+import AlbumArt from "@/components/ui/AlbumArt";
+import { Button } from "@/components/ui/button";
 import { NOW_YEAR } from "../../utils/time";
 import type { Review } from "../../types";
-import shared from "../../styles/shared.module.css";
-import styles from "./YearWrap.module.css";
+import { cn } from "@/lib/utils";
 
 function YearWrap({ reviews }: { reviews: Review[] }) {
   const [wrapYear, setWrapYear] = useState(NOW_YEAR);
@@ -49,86 +49,66 @@ function YearWrap({ reviews }: { reviews: Review[] }) {
     : null;
 
   return (
-    <div className={[shared.card, styles.s1].join(" ")}>
-      <div
-        className={styles.s2}
-      >
+    <section className="mt-3 rounded-xl border bg-card p-4">
+      <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Year Wrap
-      </div>
-      <div
-        className={styles.s3}
-      >
+      </h2>
+      <div className="mb-3 flex flex-wrap gap-2">
         {(years.length > 0 ? years : [NOW_YEAR]).map((y) => (
-          <button
+          <Button
             key={y}
+            type="button"
+            variant={wrapYear === y ? "secondary" : "outline"}
+            size="sm"
             onClick={() => setWrapYear(y)}
-            className={styles.s4} style={{ border: `1px solid ${wrapYear === y ? "#F4C542" : "#2a2a4e"}`, background: wrapYear === y ? "#2a2000" : "transparent", color: wrapYear === y ? "#F4C542" : "#666" }}
+            className={cn(wrapYear === y && "text-primary")}
           >
             {y}
-          </button>
+          </Button>
         ))}
       </div>
       {yr.length === 0 ? (
-        <div className={styles.s5}>
+        <div className="text-sm text-muted-foreground">
           No reviews for {wrapYear}.
         </div>
       ) : (
         <>
-          <div
-            className={styles.s6}
-          >
+          <div className="mb-3 grid grid-cols-3 gap-2.5">
             {[
               { label: "Albums", value: yr.length },
               { label: "Avg Rating", value: `${avgYr}/10` },
               { label: "Best Month", value: busyMonth || "—" },
             ].map(({ label, value }) => (
-              <div
-                key={label}
-                className={styles.s7}
-              >
-                <div
-                  className={styles.s8}
-                >
-                  {value}
-                </div>
-                <div
-                  className={styles.s9}
-                >
+              <div key={label} className="rounded-lg bg-muted/50 px-2 py-2.5 text-center">
+                <div className="text-base font-bold text-primary">{value}</div>
+                <div className="mt-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
                   {label}
                 </div>
               </div>
             ))}
           </div>
           {bestYr && (
-            <div
-              className={styles.s10}
-            >
+            <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 p-2.5">
               <AlbumArt src={bestYr.image} size={36} />
-              <div className={styles.s11}>
-                <div
-                  className={styles.s12}
-                >
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
                   Top Album of {wrapYear}
                 </div>
-                <div
-                  className={styles.s13}
-                >
+                <div className="truncate text-[13px] font-bold">
                   {bestYr.album}
                 </div>
-                <div className={styles.s14}>
+                <div className="text-[11px] text-muted-foreground">
                   {bestYr.artist}
                 </div>
               </div>
-              <div
-                className={styles.s15}
-              >
+              <div className="shrink-0 text-[15px] font-bold text-primary">
                 {bestYr.rating}/10
               </div>
             </div>
           )}
         </>
       )}
-    </div>
+    </section>
   );
 }
 

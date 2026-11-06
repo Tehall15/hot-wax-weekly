@@ -1,7 +1,5 @@
 import type { Review } from "../../types";
 import type { SpotifyApi } from "../../hooks/useSpotify";
-import shared from "../../styles/shared.module.css";
-import styles from "./index.module.css";
 import Top4Section from "./Top4Section";
 import CoversGrid from "./CoversGrid";
 import StatsSection from "./StatsSection";
@@ -26,10 +24,8 @@ function CollectionTab({
 }) {
   if (reviews.length === 0)
     return (
-      <div
-        className={[shared.card, styles.s1].join(" ")}
-      >
-        <div className={styles.s2}>🎵</div>
+      <div className="mt-3 rounded-xl border bg-card p-10 text-center text-muted-foreground">
+        <div className="mb-3 text-4xl">🎵</div>
         No reviews yet. Start with This Week!
       </div>
     );
@@ -47,14 +43,12 @@ function CollectionTab({
         swapTop={swapTop}
         sp={sp}
       />
-      <div className={[shared.card, styles.s3].join(" ")}>
-        <div
-          className={styles.s4}
-        >
+      <section className="mt-3 rounded-xl border bg-card p-4">
+        <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Collection ({reviews.length})
-        </div>
+        </h2>
         <CoversGrid reviews={reviews} />
-      </div>
+      </section>
       <YearWrap reviews={reviews} />
       <ReviewList reviews={reviews} del={del} />
     </div>

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { AlbumArt, Btn } from "../../components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { LOCAL_DB } from "../../utils/data";
 import { NOW_YEAR } from "../../utils/time";
 import type { SpotifyApi } from "../../hooks/useSpotify";
 import type { Album, Review } from "../../types";
-import shared from "../../styles/shared.module.css";
-import styles from "./Top4Section.module.css";
 import { resolveSlot, type Top4Props, type Which } from "./shared";
 
 function Top4Section({
@@ -58,34 +58,24 @@ function Top4Section({
         const isEditing = editTop4 === which;
 
         return (
-          <div
-            key={which}
-            className={[shared.card, styles.s1].join(" ")} style={{ marginTop: which === "year" ? 10 : 14 }}
-          >
-            <div
-              className={styles.s2}
-            >
-              <span
-                className={styles.s3}
-              >
+          <section key={which} className="mt-3 rounded-xl border bg-card p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {title}
-              </span>
-              <Btn
+              </h2>
+              <Button
                 onClick={() => {
                   setEditTop4(isEditing ? null : which);
                   clearSearch();
                 }}
                 variant="ghost"
-                
+                size="sm"
               >
                 {isEditing ? "Done" : "Edit"}
-              </Btn>
+              </Button>
             </div>
 
-            {/* 4 small covers in a row */}
-            <div
-              className={styles.s5}
-            >
+            <div className="grid grid-cols-4 gap-2">
               {data.map((item, i) => {
                 const alb = resolveSlot(item, reviews);
                 const isDragging = draggedIdx === i;
@@ -113,84 +103,71 @@ function Top4Section({
                       setDraggedIdx(null);
                       setDragOverIdx(null);
                     }}
-                    className={styles.s6} style={{ border: isDragOver
-                        ? "2px solid #F4C542"
-                        : isEditing
-                          ? "2px dashed #3a3a5e"
-                          : "1px solid #1e1e3e", opacity: isDragging ? 0.4 : 1, cursor: alb ? "grab" : "default" }}
+                    className={cn(
+                      "relative aspect-square overflow-hidden rounded-lg border bg-muted transition-opacity",
+                      isDragOver && "border-2 border-primary",
+                      !isDragOver && isEditing && "border-2 border-dashed border-border",
+                      !isDragOver && !isEditing && "border-border",
+                      isDragging && "opacity-40",
+                      alb ? "cursor-grab" : "cursor-default",
+                    )}
                   >
-                    <div className={styles.s7}>
-                      {alb ? (
-                        <>
-                          {alb.image ? (
-                            <img
-                              src={alb.image}
-                              alt={alb.album}
-                              className={styles.s8}
-                            />
-                          ) : (
-                            <div
-                              className={styles.s9}
-                            >
-                              💿
-                            </div>
-                          )}
-                          {/* number badge */}
-                          <div
-                            className={styles.s10}
-                          >
-                            {i + 1}
+                    {alb ? (
+                      <>
+                        {alb.image ? (
+                          <img
+                            src={alb.image}
+                            alt={alb.album}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center text-[22px]">
+                            💿
                           </div>
-                          {/* clear button in edit mode */}
-                          {isEditing && (
-                            <button
-                              onClick={() => updateTop(which, i, null)}
-                              className={styles.s11}
-                            >
-                              ×
-                            </button>
-                          )}
-                          {/* album name overlay */}
-                          <div
-                            className={styles.s12}
-                          >
-                            <div
-                              className={styles.s13}
-                            >
-                              {alb.album}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div
-                          className={styles.s14}
-                        >
-                          {isEditing ? "+" : ""}
+                        )}
+                        <div className="absolute left-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                          {i + 1}
                         </div>
-                      )}
-                    </div>
+                        {isEditing && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => updateTop(which, i, null)}
+                            aria-label={`Remove ${alb.album} from top four`}
+                            className="absolute right-1 top-1 size-[18px] rounded-full bg-black/75 p-0 text-white hover:bg-black"
+                          >
+                            ×
+                          </Button>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-3.5 text-[9px] leading-tight text-white">
+                          <div className="truncate font-semibold">{alb.album}</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-xl text-muted-foreground">
+                        {isEditing ? "+" : ""}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {/* Spotify search in edit mode */}
             {isEditing && (
-              <div className={styles.s15}>
-                <input
+              <div className="mt-3">
+                <Input
                   value={q}
                   onChange={(e) => search(e.target.value)}
                   placeholder={
                     sp?.token ? "Search any album on Spotify…" : "Search album…"
                   }
-                  className={styles.s16}
                 />
                 {results.length > 0 && (
-                  <div
-                    className={styles.s17}
-                  >
+                  <div className="mt-1.5 max-h-[220px] overflow-y-auto">
                     {results.map((r, idx) => (
-                      <div
+                      <button
+                        type="button"
                         key={idx}
                         onClick={() => {
                           const next = data.findIndex(
@@ -205,41 +182,35 @@ function Top4Section({
                           });
                           clearSearch();
                         }}
-                        className={styles.s18}
-                        
-                        
+                        className="mb-1 flex w-full items-center gap-2.5 rounded-md bg-muted/50 p-2 text-left transition-colors hover:bg-accent"
                       >
                         {r.image ? (
                           <img
                             src={r.image}
                             alt=""
-                            className={styles.s19}
+                            className="size-[38px] shrink-0 rounded object-cover"
                           />
                         ) : (
-                          <div
-                            className={styles.s20}
-                          >
+                          <div className="flex size-[38px] shrink-0 items-center justify-center rounded bg-muted text-base">
                             💿
                           </div>
                         )}
-                        <div className={styles.s21}>
-                          <div
-                            className={styles.s22}
-                          >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[13px] font-semibold">
                             {r.album}
                           </div>
-                          <div className={styles.s23}>
+                          <div className="text-[11px] text-muted-foreground">
                             {r.artist}
                             {r.year ? ` · ${r.year}` : ""}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
               </div>
             )}
-          </div>
+          </section>
         );
       })}
     </>

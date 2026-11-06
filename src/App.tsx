@@ -26,7 +26,6 @@ import type {
 } from "./types";
 import { slugify } from "./utils/format";
 import Header from "./components/layout/Header";
-import styles from "./App.module.css";
 
 type TabId = "review" | "hottest" | "collection" | "listen" | "history";
 type Which = "all" | "year";
@@ -456,7 +455,7 @@ export default function App() {
   const completed = slots.filter((s) => s.album && s.rating > 0).length;
 
   return (
-    <div className={styles.app}>
+    <div className="mx-auto min-h-screen max-w-[720px] bg-background px-3.5 pb-[90px] font-serif text-foreground">
       <Header
         displayName={displayName}
         journalLabel={journalLabel}

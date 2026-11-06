@@ -4,8 +4,15 @@ import AvatarDisplay from "../avatar/AvatarDisplay";
 import type { User } from "@supabase/supabase-js";
 import type { Album, AppNotification, ProfileRow } from "../../types";
 import { slugify, timeAgo } from "../../utils/format";
-import { Modal } from "../ui";
-import styles from "./FriendsPanel.module.css";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function FriendsPanel({
   user,
@@ -85,9 +92,7 @@ export default function FriendsPanel({
 
   const notifText = (n: AppNotification) => {
     const name = (
-      <span className={styles.name}>
-        {n.from_display_name}
-      </span>
+      <span className="font-semibold text-primary">{n.from_display_name}</span>
     );
     if (n.type === "follow") return <>{name} started following you</>;
     if (n.type === "reaction") return <>{name} reacted to your review</>;
@@ -97,151 +102,143 @@ export default function FriendsPanel({
       return (
         <>
           {name} recommended{" "}
-          <span className={styles.albumName}>
-            {alb?.album}
-          </span>
+          <span className="font-semibold text-foreground">{alb?.album}</span>
           {alb?.artist ? ` by ${alb.artist}` : ""}
         </>
       );
     }
-    return <span className={styles.notificationType}>{n.type}</span>;
+    return <span className="text-muted-foreground">{n.type}</span>;
+  };
+
+  const handleSectionChange = (value: string | null) => {
+    if (!value) return;
+    setActiveSection(value);
+    if (value === "notifications") onNotificationsRead();
   };
 
   return (
-    <Modal title="Bandmates" onClose={onClose} variant="drawer" width={320} headerGap={18}>
-        {/* Section toggle */}
-        <div
-          className={styles.tabs}
-        >
-          {[
-            [
-              "notifications",
-              `Notifications${notifications.length > 0 ? ` (${notifications.length})` : ""}`,
-            ],
-            ["friends", "Find Friends"],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => {
-                setActiveSection(id);
-                if (id === "notifications") onNotificationsRead();
-              }}
-              className={`${styles.tab} ${activeSection === id ? styles.activeTab : ""}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-[320px] max-w-[calc(100%-2rem)] gap-0 border-border bg-background p-0 sm:max-w-[320px]">
+        <SheetHeader className="gap-1 p-4 pr-12">
+          <SheetTitle>Bandmates</SheetTitle>
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">
+          <Tabs value={activeSection} onValueChange={handleSectionChange}>
+            <TabsList className="mb-4 w-full">
+              <TabsTrigger value="notifications">
+                Notifications
+                {notifications.length > 0 ? ` (${notifications.length})` : ""}
+              </TabsTrigger>
+              <TabsTrigger value="friends">Find Friends</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {/* Notifications feed */}
-        {activeSection === "notifications" && (
-          <div>
-            {(notifFeed || []).length === 0 ? (
-              <div
-                className={styles.emptyCentered}
-              >
-                No notifications yet
-              </div>
-            ) : (
-              <div className={styles.notificationList}>
-                {(notifFeed || []).map((n) => (
-                  <div
-                    key={n.id}
-                    className={`${styles.notification} ${n.read ? "" : styles.unread}`}
-                  >
+          {activeSection === "notifications" && (
+            <div>
+              {(notifFeed || []).length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No notifications yet
+                </div>
+              ) : (
+                <div className="flex flex-col gap-px">
+                  {(notifFeed || []).map((n) => (
                     <div
-                      className={styles.notificationText}
+                      key={n.id}
+                      className={`rounded-lg border-l-2 px-3 py-2.5 ${n.read ? "border-l-transparent" : "border-l-destructive bg-card"}`}
                     >
-                      {notifText(n)}
-                    </div>
-                    <div className={styles.timestamp}>
-                      {timeAgo(n.created_at ?? "")}
-                    </div>
-                    {n.type === "recommendation" && n.metadata?.album && (
-                      <div className={styles.notificationActions}>
-                        <button
-                          onClick={() => {
-                            addToThisWeek(n.metadata!.album!);
-                            onClose();
-                          }}
-                          className={styles.weekButton}
-                        >
-                          + This Week
-                        </button>
-                        <button
-                          onClick={() => addLL(n.metadata!.album!)}
-                          className={styles.listenLaterButton}
-                        >
-                          + Listen Later
-                        </button>
+                      <div className="text-[13px] leading-relaxed text-foreground/80">
+                        {notifText(n)}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Find Friends */}
-        {activeSection === "friends" && (
-          <div>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name…"
-              className={styles.search}
-            />
-            {loading ? (
-              <div className={styles.empty}>Loading…</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className={styles.empty}>
-                {search ? "No users found" : "No other users yet"}
-              </div>
-            ) : (
-              <div className={styles.userList}>
-                {filteredUsers.map((u) => {
-                  const isFollowing = following.includes(u.id);
-                  return (
-                    <div
-                      key={u.id}
-                      className={styles.userRow}
-                    >
-                      <div
-                        className={styles.userIdentity}
-                      >
-                        <AvatarDisplay
-                          avatar={u.data?.avatar}
-                          name={u.display_name}
-                          size={34}
-                        />
-                        <div>
-                          <div className={styles.userName}>
-                            {u.display_name}
-                          </div>
-                          <a
-                            href={`/u/${slugify(u.display_name)}`}
-                            className={styles.profileLink}
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        {timeAgo(n.created_at ?? "")}
+                      </div>
+                      {n.type === "recommendation" && n.metadata?.album && (
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            size="xs"
+                            onClick={() => {
+                              addToThisWeek(n.metadata!.album!);
+                              onClose();
+                            }}
                           >
-                            View profile →
-                          </a>
+                            + This Week
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => addLL(n.metadata!.album!)}
+                          >
+                            + Listen Later
+                          </Button>
                         </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          isFollowing ? unfollow(u.id) : follow(u.id)
-                        }
-                        className={`${styles.followButton} ${isFollowing ? styles.following : ""}`}
-                      >
-                        {isFollowing ? "Following" : "Follow"}
-                      </button>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-    </Modal>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSection === "friends" && (
+            <div>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name…"
+                className="mb-3 text-[13px]"
+              />
+              {loading ? (
+                <div className="text-sm text-muted-foreground">Loading…</div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  {search ? "No users found" : "No other users yet"}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filteredUsers.map((u) => {
+                    const isFollowing = following.includes(u.id);
+                    return (
+                      <div
+                        key={u.id}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <AvatarDisplay
+                            avatar={u.data?.avatar}
+                            name={u.display_name}
+                            size={34}
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-[13px] font-semibold">
+                              {u.display_name}
+                            </div>
+                            <a
+                              href={`/u/${slugify(u.display_name)}`}
+                              className="text-[11px] text-muted-foreground hover:text-foreground"
+                            >
+                              View profile →
+                            </a>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isFollowing ? "outline" : "default"}
+                          className="shrink-0"
+                          onClick={() =>
+                            isFollowing ? unfollow(u.id) : follow(u.id)
+                          }
+                        >
+                          {isFollowing ? "Following" : "Follow"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,6 +1,4 @@
 import type { Review } from "../../types";
-import shared from "../../styles/shared.module.css";
-import styles from "./StatsSection.module.css";
 
 function computeStreak(reviews: Review[]) {
   const weekKeys = new Set(
@@ -30,36 +28,26 @@ function StatsSection({ reviews }: { reviews: Review[] }) {
   const streak = computeStreak(reviews);
 
   return (
-    <div className={[shared.card, styles.s1].join(" ")}>
-      <div
-        className={styles.s2}
-      >
+    <section className="mt-3 rounded-xl border bg-card p-4">
+      <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Stats
-      </div>
-      <div
-        className={styles.s3}
-      >
+      </h2>
+      <div className="mb-1 grid grid-cols-3 gap-3">
         {[
           { label: "Reviews", value: total },
           { label: "Avg Rating", value: `${avg}/10` },
           { label: "Week Streak", value: `${streak}🔥` },
         ].map(({ label, value }) => (
-          <div
-            key={label}
-            className={styles.s4}
-          >
-            <div className={styles.s5}>
-              {value}
-            </div>
-            <div
-              className={styles.s6}
-            >
+          <div key={label} className="rounded-lg bg-muted/50 px-3 py-2.5 text-center">
+            <div className="text-lg font-bold text-primary">{value}</div>
+            <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
               {label}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
+
 export default StatsSection;
